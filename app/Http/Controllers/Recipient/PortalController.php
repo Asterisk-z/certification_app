@@ -48,17 +48,15 @@ class PortalController extends Controller
     public function download(Request $request, string $uuid): StreamedResponse|JsonResponse
     {
         $certificate = $this->ownCertificate($request, $uuid);
-        $path = $certificate->uploaded_file_path ?: $certificate->pdf_path;
+        $format = $request->query('format') === 'png' ? 'png' : 'pdf';
 
-        if (! $path || ! Storage::disk('local')->exists($path)) {
-            try {
-                $path = app(CertificateRenderService::class)->pdf($certificate);
-            } catch (\Throwable) {
-                return response()->json(['message' => 'The PDF is not available yet.'], 422);
-            }
+        try {
+            $path = app(CertificateRenderService::class)->downloadPath($certificate, $format);
+        } catch (\Throwable) {
+            return response()->json(['message' => 'The file is not available yet.'], 422);
         }
 
-        return Storage::disk('local')->download($path, $certificate->certificate_number.'.pdf');
+        return Storage::disk('local')->download($path, $certificate->certificate_number.'.'.$format);
     }
 
     public function updateProfile(Request $request): JsonResponse

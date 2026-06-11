@@ -74,6 +74,7 @@ function actionsFor(certificate) {
     const actions = [
         { key: 'view', label: 'View details' },
         { key: 'download', label: 'Download PDF' },
+        ...(certificate.uploaded_file_path ? [] : [{ key: 'download-png', label: 'Download PNG' }]),
     ];
     const status = certificate.status;
 
@@ -93,6 +94,10 @@ async function handle(certificate, action) {
     }
     if (action === 'download') {
         store.download(certificate.uuid);
+        return;
+    }
+    if (action === 'download-png') {
+        store.download(certificate.uuid, 'png');
         return;
     }
     if (action === 'renew') {

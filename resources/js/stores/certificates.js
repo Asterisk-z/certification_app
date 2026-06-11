@@ -78,8 +78,8 @@ export const useCertificatesStore = defineStore('certificates', {
             return data;
         },
 
-        download(uuid) {
-            window.open(`/api/admin/certificates/${uuid}/download`, '_blank');
+        download(uuid, format = 'pdf') {
+            window.open(`/api/admin/certificates/${uuid}/download?format=${format}`, '_blank');
         },
     },
 });

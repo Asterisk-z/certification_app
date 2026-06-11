@@ -113,6 +113,28 @@ class CertificateRenderService
         return $path;
     }
 
+    /**
+     * Resolve the file to download for a format, rendering on demand.
+     *
+     * @throws \RuntimeException when the format is unavailable
+     */
+    public function downloadPath(Certificate $certificate, string $format = 'pdf'): string
+    {
+        if ($format === 'png') {
+            if ($certificate->uploaded_file_path) {
+                throw new \RuntimeException('Only the manually uploaded PDF is available for this certificate.');
+            }
+
+            return $certificate->png_path && Storage::disk('local')->exists($certificate->png_path)
+                ? $certificate->png_path
+                : $this->png($certificate);
+        }
+
+        $path = $certificate->uploaded_file_path ?: $certificate->pdf_path;
+
+        return $path && Storage::disk('local')->exists($path) ? $path : $this->pdf($certificate);
+    }
+
     public function verifyUrl(Certificate $certificate): string
     {
         return url('/?number='.urlencode($certificate->certificate_number));

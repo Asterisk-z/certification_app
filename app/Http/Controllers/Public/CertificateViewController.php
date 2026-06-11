@@ -31,16 +31,14 @@ class CertificateViewController extends Controller
     public function download(string $uuid): StreamedResponse|JsonResponse
     {
         $certificate = Certificate::where('uuid', $uuid)->firstOrFail();
-        $path = $certificate->uploaded_file_path ?: $certificate->pdf_path;
+        $format = request()->query('format') === 'png' ? 'png' : 'pdf';
 
-        if (! $path || ! Storage::disk('local')->exists($path)) {
-            try {
-                $path = $this->renderer->pdf($certificate);
-            } catch (\Throwable $e) {
-                return response()->json(['message' => 'The PDF is not available yet.'], 422);
-            }
+        try {
+            $path = $this->renderer->downloadPath($certificate, $format);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'The file is not available yet.'], 422);
         }
 
-        return Storage::disk('local')->download($path, $certificate->certificate_number.'.pdf');
+        return Storage::disk('local')->download($path, $certificate->certificate_number.'.'.$format);
     }
 }

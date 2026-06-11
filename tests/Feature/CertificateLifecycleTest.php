@@ -17,6 +17,7 @@ use App\Services\CertificateRenderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CertificateLifecycleTest extends TestCase
@@ -266,6 +267,20 @@ class CertificateLifecycleTest extends TestCase
             ->getJson('/api/admin/certificates?q='.$match->certificate_number)
             ->assertOk()
             ->assertJsonPath('total', 1);
+    }
+
+    public function test_download_supports_png_format(): void
+    {
+        Storage::fake('local');
+        $certificate = Certificate::factory()->sent()->create(['certificate_template_id' => $this->template->id]);
+
+        Storage::disk('local')->put("certificates/{$certificate->uuid}.png", 'fake-png');
+        $certificate->forceFill(['png_path' => "certificates/{$certificate->uuid}.png"])->save();
+
+        $this->actingAs($this->admin)
+            ->get("/api/admin/certificates/{$certificate->uuid}/download?format=png")
+            ->assertOk()
+            ->assertDownload($certificate->certificate_number.'.png');
     }
 
     public function test_expiry_job_flips_overdue_sent_certificates(): void

@@ -145,20 +145,17 @@ class CertificateController extends Controller
     public function download(string $uuid): StreamedResponse|JsonResponse
     {
         $certificate = Certificate::withTrashed()->where('uuid', $uuid)->firstOrFail();
-        $path = $certificate->uploaded_file_path ?: $certificate->pdf_path;
+        $format = request()->query('format') === 'png' ? 'png' : 'pdf';
 
-        if (! $path || ! Storage::disk('local')->exists($path)) {
-            // Generate on demand if it was never rendered.
-            try {
-                $path = app(CertificateRenderService::class)->pdf($certificate);
-            } catch (\Throwable $e) {
-                return response()->json(['message' => 'PDF is not available yet: '.$e->getMessage()], 422);
-            }
+        try {
+            $path = app(CertificateRenderService::class)->downloadPath($certificate, $format);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'The file is not available yet: '.$e->getMessage()], 422);
         }
 
         return Storage::disk('local')->download(
             $path,
-            $certificate->certificate_number.'.pdf'
+            $certificate->certificate_number.'.'.$format
         );
     }
 

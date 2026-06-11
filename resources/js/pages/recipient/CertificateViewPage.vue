@@ -12,8 +12,8 @@ onMounted(async () => {
     certificate.value = data;
 });
 
-function download() {
-    window.open(`/api/me/certificates/${certificate.value.uuid}/download`, '_blank');
+function download(format = 'pdf') {
+    window.open(`/api/me/certificates/${certificate.value.uuid}/download?format=${format}`, '_blank');
 }
 </script>
 
@@ -32,8 +32,14 @@ function download() {
                 <p class="mt-1 font-mono text-sm text-slate-500 dark:text-slate-400">{{ certificate.certificate_number }}</p>
             </div>
             <div class="flex gap-2">
-                <button class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700" @click="download">
+                <button class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700" @click="download()">
                     Download PDF
+                </button>
+                <button
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/60"
+                    @click="download('png')"
+                >
+                    Download PNG
                 </button>
                 <a
                     :href="`/?number=${encodeURIComponent(certificate.certificate_number)}`"

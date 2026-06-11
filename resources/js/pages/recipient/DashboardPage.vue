@@ -26,8 +26,8 @@ async function load() {
 
 onMounted(load);
 
-function download(certificate) {
-    window.open(`/api/me/certificates/${certificate.uuid}/download`, '_blank');
+function download(certificate, format = 'pdf') {
+    window.open(`/api/me/certificates/${certificate.uuid}/download?format=${format}`, '_blank');
 }
 </script>
 
@@ -79,7 +79,13 @@ function download(certificate) {
                             class="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                             @click="download(certificate)"
                         >
-                            Download PDF
+                            PDF
+                        </button>
+                        <button
+                            class="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/60"
+                            @click="download(certificate, 'png')"
+                        >
+                            PNG
                         </button>
                     </div>
                 </div>
