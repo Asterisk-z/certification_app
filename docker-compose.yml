@@ -1,4 +1,4 @@
-# HSE Credential — full stack.
+# HSE Credential — full local stack (SQLite, no external database).
 #
 #   docker compose up -d --build
 #
@@ -7,112 +7,91 @@
 #
 # APP_KEY and APP_NAME are read from the project .env file. Generate a key
 # once with: docker compose run --rm --no-deps app php artisan key:generate --show
+#
+# The SQLite file lives on the shared `storage` volume
+# (storage/app/database/database.sqlite), so app, queue and scheduler all
+# use the same database.
 
 services:
-  app:
-    build:
-      context: .
-      target: app
-    image: hse-credential-app
-    restart: unless-stopped
-    env_file: .env
-    environment: &app-env
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: http://localhost:8080
-      SANCTUM_STATEFUL_DOMAINS: "localhost:8080,localhost,127.0.0.1:8080"
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: hse_credential
-      DB_USERNAME: hse
-      DB_PASSWORD: secret
-      SESSION_DRIVER: database
-      CACHE_STORE: database
-      QUEUE_CONNECTION: database
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      MAIL_FROM_ADDRESS: credentials@hseboard.com
-      MAIL_FROM_NAME: "HSE Credential"
-      CHROME_PATH: /usr/bin/chromium
-    volumes:
-      - storage:/var/www/html/storage
-    depends_on:
-      mysql:
-        condition: service_healthy
+    app:
+        build:
+            context: .
+            target: app
+        image: hse-credential-app
+        restart: unless-stopped
+        env_file: .env
+        environment: &app-env
+            APP_ENV: production
+            APP_DEBUG: "false"
+            APP_URL: http://localhost:8080
+            SANCTUM_STATEFUL_DOMAINS: "localhost:8080,localhost,127.0.0.1:8080"
+            DB_CONNECTION: sqlite
+            DB_DATABASE: /var/www/html/storage/app/database/database.sqlite
+            SESSION_DRIVER: database
+            CACHE_STORE: database
+            QUEUE_CONNECTION: database
+            MAIL_MAILER: smtp
+            MAIL_HOST: mailpit
+            MAIL_PORT: 1025
+            MAIL_FROM_ADDRESS: credentials@hseboard.com
+            MAIL_FROM_NAME: "HSE Credential"
+            CHROME_PATH: /usr/bin/chromium
+        volumes:
+            - storage:/var/www/html/storage
 
-  web:
-    build:
-      context: .
-      target: web
-    image: hse-credential-web
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    volumes:
-      - storage:/var/www/html/storage:ro
-    depends_on:
-      - app
+    web:
+        build:
+            context: .
+            target: web
+        image: hse-credential-web
+        restart: unless-stopped
+        ports:
+            - "8080:80"
+        volumes:
+            - storage:/var/www/html/storage:ro
+        depends_on:
+            - app
 
-  queue:
-    image: hse-credential-app
-    pull_policy: never
-    restart: unless-stopped
-    command: php artisan queue:work --queue=emails,default --tries=3 --backoff=60 --max-time=3600
-    env_file: .env
-    environment:
-      <<: *app-env
-      SKIP_BOOTSTRAP: "1"
-    volumes:
-      - storage:/var/www/html/storage
-    depends_on:
-      app:
-        condition: service_started
-      mysql:
-        condition: service_healthy
+    queue:
+        image: hse-credential-app
+        pull_policy: never
+        restart: unless-stopped
+        command: php artisan queue:work --queue=emails,default --tries=3 --backoff=60 --max-time=3600
+        env_file: .env
+        environment:
+            <<: *app-env
+            SKIP_BOOTSTRAP: "1"
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            app:
+                condition: service_started
 
-  scheduler:
-    image: hse-credential-app
-    pull_policy: never
-    restart: unless-stopped
-    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
-    env_file: .env
-    environment:
-      <<: *app-env
-      SKIP_BOOTSTRAP: "1"
-    volumes:
-      - storage:/var/www/html/storage
-    depends_on:
-      app:
-        condition: service_started
-      mysql:
-        condition: service_healthy
+    scheduler:
+        image: hse-credential-app
+        pull_policy: never
+        restart: unless-stopped
+        command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+        env_file: .env
+        environment:
+            <<: *app-env
+            SKIP_BOOTSTRAP: "1"
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            app:
+                condition: service_started
 
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: hse_credential
-      MYSQL_USER: hse
-      MYSQL_PASSWORD: secret
-      MYSQL_ROOT_PASSWORD: secret-root
-    volumes:
-      - mysql-data:/var/lib/mysql
-    ports:
-      - "33070:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psecret-root"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  mailpit:
-    image: axllent/mailpit:latest
-    restart: unless-stopped
-    ports:
-      - "8025:8025"
+    mailpit:
+        image: axllent/mailpit:latest
+        restart: unless-stopped
+        ports:
+            - "8025:8025"
 
 volumes:
-  storage:
-  mysql-data:
+    storage:
+
+networks:
+    hse-app-network:
+        driver: bridge
+        external: true

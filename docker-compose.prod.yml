@@ -1,9 +1,13 @@
-# Production stack for setup.certification.hseboard.com
+# Production stack for setup.certification.hseboard.com — SQLite edition.
 #
 # Designed for the hseboard server, where Caddy runs in Docker on the
 # external `hse-app-network` and proxies each site to a named container
 # (see deploy/Caddyfile.example). Only the web container joins that
 # network; everything else stays on a private internal network.
+#
+# The database is SQLite (WAL mode) on the shared `storage` volume —
+# no database server to run. Back it up by copying
+# storage/app/database/database.sqlite from the volume.
 #
 # On the server:
 #   cp .env.production.example .env     # then fill in the values
@@ -18,8 +22,8 @@ services:
     restart: unless-stopped
     env_file: .env
     environment: &app-env
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/storage/app/database/database.sqlite
       CHROME_PATH: /usr/bin/chromium
       SESSION_DRIVER: database
       CACHE_STORE: database
@@ -28,9 +32,6 @@ services:
       - storage:/var/www/html/storage
     networks:
       - internal
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   web:
     build:
@@ -63,8 +64,6 @@ services:
     depends_on:
       app:
         condition: service_started
-      mysql:
-        condition: service_healthy
 
   scheduler:
     image: hse-credential-app
@@ -82,26 +81,6 @@ services:
     depends_on:
       app:
         condition: service_started
-      mysql:
-        condition: service_healthy
-
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-hse_credential}
-      MYSQL_USER: ${DB_USERNAME:-hse}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
-    volumes:
-      - mysql-data:/var/lib/mysql
-    networks:
-      - internal
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
 
 networks:
   internal:
@@ -112,4 +91,3 @@ networks:
 
 volumes:
   storage:
-  mysql-data:

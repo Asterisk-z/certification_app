@@ -21,8 +21,17 @@ if [ -z "$APP_KEY" ]; then
     exit 1
 fi
 
+# SQLite lives on the shared storage volume so web, queue and scheduler all
+# see the same database file.
+if [ "$DB_CONNECTION" = "sqlite" ] && [ -n "$DB_DATABASE" ]; then
+    mkdir -p "$(dirname "$DB_DATABASE")"
+    [ -f "$DB_DATABASE" ] || touch "$DB_DATABASE"
+    # The directory must be writable too — WAL mode creates -wal/-shm files.
+    chown -R www-data:www-data "$(dirname "$DB_DATABASE")"
+fi
+
 # Wait for the database before migrating (first boot of MySQL can be slow).
-if [ -n "$DB_HOST" ]; then
+if [ -n "$DB_HOST" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "Waiting for database at $DB_HOST..."
     tries=0
     until php -r 'new PDO(sprintf("mysql:host=%s;port=%s", getenv("DB_HOST"), getenv("DB_PORT") ?: 3306), getenv("DB_USERNAME"), getenv("DB_PASSWORD"));' 2>/dev/null; do

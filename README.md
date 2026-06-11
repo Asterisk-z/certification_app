@@ -45,7 +45,8 @@ Pinia, Tailwind CSS 4), authenticated with **Sanctum** SPA cookies.
 ## Docker (recommended)
 
 The repo ships a full stack — app (PHP-FPM + Chromium for PDFs), nginx, queue
-worker, scheduler, MySQL 8 and Mailpit:
+worker, scheduler and Mailpit (SQLite on the shared storage volume — no
+database server):
 
 ```bash
 docker compose up -d --build
@@ -55,7 +56,7 @@ docker compose up -d --build
 | --- | --- |
 | App | http://localhost:8080 (admin@hseboard.com / password) |
 | Mailpit (all outgoing email) | http://localhost:8025 |
-| MySQL (host access) | localhost:33070, user `hse` / `secret` |
+| Database | SQLite at storage/app/database/database.sqlite (WAL mode) |
 
 `APP_KEY` is read from the project `.env` (generate one with
 `docker compose run --rm --no-deps app php artisan key:generate --show`).
@@ -99,7 +100,7 @@ server's Caddy. One-time setup:
 
 ```bash
 cd /var/www/setup.certification.hseboard.com
-cp .env.production.example .env        # fill in APP_KEY, DB + SMTP passwords
+cp .env.production.example .env        # fill in APP_KEY + SMTP credentials
 docker compose -f docker-compose.prod.yml up -d --build
 # add the site block from deploy/Caddyfile.example to /var/www/Caddyfile, then:
 docker exec hsewebserver caddy reload --config /etc/caddy/Caddyfile
