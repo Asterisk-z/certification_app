@@ -38,16 +38,25 @@ class CertificateIssuedMail extends Mailable
 
     public function attachments(): array
     {
-        $path = $this->certificate->uploaded_file_path ?: $this->certificate->pdf_path;
+        $attachments = [];
 
-        if (! $path || ! Storage::disk('local')->exists($path)) {
-            return [];
+        $pdf = $this->certificate->uploaded_file_path ?: $this->certificate->pdf_path;
+
+        if ($pdf && Storage::disk('local')->exists($pdf)) {
+            $attachments[] = Attachment::fromStorageDisk('local', $pdf)
+                ->as($this->certificate->certificate_number.'.pdf')
+                ->withMime('application/pdf');
         }
 
-        return [
-            Attachment::fromStorageDisk('local', $path)
-                ->as($this->certificate->certificate_number.'.pdf')
-                ->withMime('application/pdf'),
-        ];
+        // Image version for easy sharing/embedding (skipped for manual uploads).
+        if (! $this->certificate->uploaded_file_path
+            && $this->certificate->png_path
+            && Storage::disk('local')->exists($this->certificate->png_path)) {
+            $attachments[] = Attachment::fromStorageDisk('local', $this->certificate->png_path)
+                ->as($this->certificate->certificate_number.'.png')
+                ->withMime('image/png');
+        }
+
+        return $attachments;
     }
 }

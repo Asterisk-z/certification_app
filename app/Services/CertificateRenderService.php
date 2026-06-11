@@ -80,6 +80,39 @@ class CertificateRenderService
         return $path;
     }
 
+    /**
+     * Generate (or return the existing) PNG image of the certificate.
+     * Returns the relative path on the "local" disk.
+     */
+    public function png(Certificate $certificate, bool $force = false): string
+    {
+        if (! $force && $certificate->png_path && Storage::disk('local')->exists($certificate->png_path)) {
+            return $certificate->png_path;
+        }
+
+        $template = $certificate->template;
+        $path = "certificates/{$certificate->uuid}.png";
+        $absolute = Storage::disk('local')->path($path);
+        Storage::disk('local')->makeDirectory('certificates');
+
+        $shot = Browsershot::html($this->html($certificate))
+            ->noSandbox()
+            ->addChromiumArguments(['disable-dev-shm-usage'])
+            ->showBackground()
+            ->windowSize($template->bg_width, $template->bg_height)
+            ->timeout(120);
+
+        if ($chrome = config('services.chrome.path')) {
+            $shot->setChromePath($chrome);
+        }
+
+        $shot->save($absolute);
+
+        $certificate->forceFill(['png_path' => $path])->save();
+
+        return $path;
+    }
+
     public function verifyUrl(Certificate $certificate): string
     {
         return url('/?number='.urlencode($certificate->certificate_number));

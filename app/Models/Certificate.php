@@ -31,6 +31,7 @@ class Certificate extends Model
         'revoked_at',
         'renewed_from_id',
         'pdf_path',
+        'png_path',
         'uploaded_file_path',
         'is_manual',
         'send_error',

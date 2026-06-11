@@ -23,7 +23,17 @@ class PortalAndVerificationTest extends TestCase
         $this->getJson('/api/verify?number='.$certificate->certificate_number)
             ->assertOk()
             ->assertJsonPath('result', 'valid')
-            ->assertJsonPath('certificate.holder', $certificate->recipient->full_name);
+            ->assertJsonPath('certificate.holder', $certificate->recipient->full_name)
+            ->assertJsonPath('certificate.view_url', url('/c/'.$certificate->uuid));
+    }
+
+    public function test_verification_hides_view_url_for_revoked_certificates(): void
+    {
+        $revoked = Certificate::factory()->sent()->create(['status' => 'revoked', 'revoked_at' => now()]);
+
+        $this->getJson('/api/verify?number='.$revoked->certificate_number)
+            ->assertOk()
+            ->assertJsonPath('certificate.view_url', null);
     }
 
     public function test_verification_reports_revoked_and_expired_and_not_found(): void

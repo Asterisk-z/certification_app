@@ -50,6 +50,10 @@ class VerificationController extends Controller
                 'issue_date' => $certificate->issue_date->format('Y-m-d'),
                 'expiry_date' => $certificate->expiry_date?->format('Y-m-d'),
                 'revoked_at' => $certificate->revoked_at?->format('Y-m-d'),
+                // Revoked certificates are not viewable publicly.
+                'view_url' => $certificate->status === CertificateStatus::Revoked
+                    ? null
+                    : url('/c/'.$certificate->uuid),
             ],
         ]);
     }

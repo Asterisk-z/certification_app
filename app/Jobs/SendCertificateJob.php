@@ -38,9 +38,10 @@ class SendCertificateJob implements ShouldQueue
             return;
         }
 
-        // Generate the PDF unless an admin manually uploaded the file.
+        // Generate the PDF + PNG unless an admin manually uploaded the file.
         if (! $certificate->uploaded_file_path) {
             $renderer->pdf($certificate);
+            $renderer->png($certificate);
         }
 
         Mail::to($certificate->recipient->email)->send(new CertificateIssuedMail($certificate));

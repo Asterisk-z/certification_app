@@ -80,6 +80,7 @@ class CertificateLifecycleTest extends TestCase
         Mail::fake();
         $this->mock(CertificateRenderService::class, function ($mock) {
             $mock->shouldReceive('pdf')->andReturn('certificates/fake.pdf');
+            $mock->shouldReceive('png')->andReturn('certificates/fake.png');
         });
 
         $certificate = Certificate::factory()->create([
