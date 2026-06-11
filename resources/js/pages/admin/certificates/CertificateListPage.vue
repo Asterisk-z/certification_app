@@ -9,6 +9,7 @@ import StatusBadge from '@/components/ui/StatusBadge.vue';
 import AppPagination from '@/components/ui/AppPagination.vue';
 import ActionDropdown from '@/components/ui/ActionDropdown.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import RenewDialog from '@/components/certificates/RenewDialog.vue';
 
 const store = useCertificatesStore();
 const ui = useUiStore();
@@ -16,6 +17,7 @@ const router = useRouter();
 
 const templates = ref([]);
 const confirm = ref(null); // { title, message, confirmLabel, run }
+const renewing = ref(null); // certificate being renewed (opens the dialog)
 
 const tabs = [
     { key: 'all', label: 'All' },
@@ -42,7 +44,7 @@ onMounted(async () => {
     // rows are selected or a dialog is open so in-progress work isn't lost.
     eventSource = new EventSource('/api/admin/certificates/stream');
     eventSource.addEventListener('certificates', () => {
-        if (!store.selected.length && !confirm.value && !store.loading) {
+        if (!store.selected.length && !confirm.value && !renewing.value && !store.loading) {
             store.fetch();
         }
     });
@@ -93,6 +95,10 @@ async function handle(certificate, action) {
         store.download(certificate.uuid);
         return;
     }
+    if (action === 'renew') {
+        renewing.value = certificate;
+        return;
+    }
     if (action === 'revoke') {
         confirm.value = {
             title: 'Revoke certificate?',
@@ -131,9 +137,9 @@ async function handle(certificate, action) {
     await runAction(certificate, action, messages[action] || 'Done.');
 }
 
-async function runAction(certificate, action, successMessage) {
+async function runAction(certificate, action, successMessage, payload = {}) {
     try {
-        await store.action(certificate.uuid, action);
+        await store.action(certificate.uuid, action, payload);
         ui.success(successMessage);
         store.fetch();
     } catch (e) {
@@ -141,6 +147,12 @@ async function runAction(certificate, action, successMessage) {
     } finally {
         confirm.value = null;
     }
+}
+
+async function confirmRenew(dates) {
+    const certificate = renewing.value;
+    renewing.value = null;
+    await runAction(certificate, 'renew', 'Certificate renewed — the new one is queued for sending.', dates);
 }
 
 function bulk(action) {
@@ -329,6 +341,13 @@ function recipientName(certificate) {
             :confirm-label="confirm?.confirmLabel"
             @confirm="confirm.run()"
             @cancel="confirm = null"
+        />
+
+        <RenewDialog
+            :open="!!renewing"
+            :certificate="renewing"
+            @close="renewing = null"
+            @confirm="confirmRenew"
         />
     </div>
 </template>

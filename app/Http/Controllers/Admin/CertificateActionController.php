@@ -88,9 +88,16 @@ class CertificateActionController extends Controller
             return response()->json(['message' => 'Only sent or expired certificates can be renewed.'], 422);
         }
 
-        $issueDate = $request->validate(['issue_date' => ['nullable', 'date']])['issue_date'] ?? null;
+        $validated = $request->validate([
+            'issue_date' => ['nullable', 'date'],
+            'expiry_date' => ['nullable', 'date', 'after:issue_date'],
+        ]);
 
-        $new = $this->issuer->renew($certificate, $issueDate ? Carbon::parse($issueDate) : null);
+        $new = $this->issuer->renew(
+            $certificate,
+            isset($validated['issue_date']) ? Carbon::parse($validated['issue_date']) : null,
+            isset($validated['expiry_date']) ? Carbon::parse($validated['expiry_date']) : null,
+        );
 
         activity()->performedOn($certificate)->causedBy($request->user())
             ->withProperties(['new_certificate' => $new->certificate_number])->log('certificate_renewed');

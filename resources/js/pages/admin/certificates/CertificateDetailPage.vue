@@ -5,6 +5,7 @@ import { useCertificatesStore } from '@/stores/certificates';
 import { useUiStore } from '@/stores/ui';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import RenewDialog from '@/components/certificates/RenewDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -14,6 +15,12 @@ const ui = useUiStore();
 const certificate = ref(null);
 const confirm = ref(null);
 const uploading = ref(false);
+const renewOpen = ref(false);
+
+async function confirmRenew(dates) {
+    renewOpen.value = false;
+    await run('renew', 'Renewed — the new certificate is queued.', dates);
+}
 
 async function load() {
     certificate.value = await store.fetchOne(route.params.uuid);
@@ -105,7 +112,7 @@ async function upload(event) {
                 <button
                     v-if="['sent', 'expired'].includes(certificate.status)"
                     class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                    @click="run('renew', 'Renewed — the new certificate is queued.')"
+                    @click="renewOpen = true"
                 >
                     Renew
                 </button>
@@ -191,6 +198,13 @@ async function upload(event) {
             :confirm-label="confirm?.confirmLabel"
             @confirm="confirm.run()"
             @cancel="confirm = null"
+        />
+
+        <RenewDialog
+            :open="renewOpen"
+            :certificate="certificate"
+            @close="renewOpen = false"
+            @confirm="confirmRenew"
         />
     </div>
     <div v-else class="py-16 text-center text-sm text-slate-500 dark:text-slate-400">Loading certificate…</div>

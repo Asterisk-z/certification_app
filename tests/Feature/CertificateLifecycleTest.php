@@ -165,6 +165,28 @@ class CertificateLifecycleTest extends TestCase
         $this->assertEquals($certificate->id, Certificate::where('uuid', $response->json('uuid'))->first()->renewed_from_id);
     }
 
+    public function test_renew_accepts_custom_validity_date(): void
+    {
+        Queue::fake();
+        $certificate = Certificate::factory()->expired()->create(['certificate_template_id' => $this->template->id]);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/admin/certificates/{$certificate->uuid}/renew", [
+                'issue_date' => '2026-06-12',
+                'expiry_date' => '2031-06-12',
+            ])->assertCreated();
+
+        $this->assertEquals('2031-06-12', substr($response->json('expiry_date'), 0, 10));
+
+        // Expiry before issue date is rejected.
+        $another = Certificate::factory()->expired()->create(['certificate_template_id' => $this->template->id]);
+        $this->actingAs($this->admin)
+            ->postJson("/api/admin/certificates/{$another->uuid}/renew", [
+                'issue_date' => '2026-06-12',
+                'expiry_date' => '2026-06-01',
+            ])->assertUnprocessable();
+    }
+
     public function test_soft_delete_restore_and_deleted_listing(): void
     {
         $certificate = Certificate::factory()->sent()->create(['certificate_template_id' => $this->template->id]);
