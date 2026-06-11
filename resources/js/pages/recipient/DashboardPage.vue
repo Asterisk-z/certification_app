@@ -62,7 +62,7 @@ function download(certificate, format = 'pdf') {
                     <StatusBadge :status="certificate.status" class="absolute right-3 top-3" />
                 </div>
                 <div class="p-4">
-                    <h2 class="font-semibold text-slate-900 dark:text-slate-100">{{ certificate.template?.name }}</h2>
+                    <h2 class="font-semibold text-slate-900 dark:text-slate-100">{{ certificate.template?.name || certificate.title || 'Certificate' }}</h2>
                     <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ certificate.certificate_number }}</p>
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Issued {{ certificate.issue_date?.slice(0, 10) }}

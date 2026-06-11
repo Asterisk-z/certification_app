@@ -29,7 +29,7 @@ class ExistingCertificatesImport implements ToCollection, WithHeadingRow
     public array $failures = [];
 
     public function __construct(
-        private readonly CertificateTemplate $template,
+        private readonly ?CertificateTemplate $template,
         private readonly ?Group $group,
     ) {}
 
@@ -37,7 +37,7 @@ class ExistingCertificatesImport implements ToCollection, WithHeadingRow
     {
         $customSlugs = array_values(array_diff(
             ExistingCertificatesFormatExport::headingsFor($this->template),
-            ['certificate_number', 'full_name', 'email', 'completion_date', 'issue_date', 'expiry_date']
+            ['certificate_number', 'full_name', 'email', 'completion_date', 'issue_date', 'expiry_date', 'certificate_title']
         ));
 
         foreach ($rows as $index => $row) {
@@ -93,11 +93,13 @@ class ExistingCertificatesImport implements ToCollection, WithHeadingRow
                 $custom[$slug] = isset($data[$slug]) ? (string) $data[$slug] : '';
             }
 
-            if (! $expiryDate && $this->template->duration && $this->template->duration_type) {
+            if (! $expiryDate && $this->template?->duration && $this->template?->duration_type) {
                 $expiryDate = $this->template->duration_type->addTo($issueDate, $this->template->duration);
             }
 
-            $this->template->certificates()->create([
+            Certificate::create([
+                'certificate_template_id' => $this->template?->id,
+                'title' => filled($data['certificate_title'] ?? null) ? trim((string) $data['certificate_title']) : null,
                 'recipient_id' => $recipient->id,
                 'group_id' => $this->group?->id,
                 'certificate_number' => $number,

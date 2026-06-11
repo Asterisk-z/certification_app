@@ -294,7 +294,7 @@ function recipientName(certificate) {
                             <p class="font-medium text-slate-900 dark:text-slate-100">{{ recipientName(c) }}</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400">{{ c.recipient?.email }}</p>
                         </td>
-                        <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.template?.name }}</td>
+                        <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.template?.name || c.title || '—' }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.issue_date?.slice(0, 10) }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.expiry_date?.slice(0, 10) || 'Never' }}</td>
                         <td class="px-4 py-3"><StatusBadge :status="showingDeleted ? 'deleted' : c.status" /></td>
@@ -325,7 +325,7 @@ function recipientName(certificate) {
                             <StatusBadge :status="showingDeleted ? 'deleted' : c.status" />
                         </div>
                         <p class="mt-1 truncate font-medium text-slate-900 dark:text-slate-100">{{ recipientName(c) }}</p>
-                        <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ c.template?.name }}</p>
+                        <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ c.template?.name || c.title || '—' }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             Issued {{ c.issue_date?.slice(0, 10) }} · expires {{ c.expiry_date?.slice(0, 10) || 'never' }}
                         </p>

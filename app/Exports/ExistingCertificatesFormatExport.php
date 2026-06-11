@@ -10,7 +10,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ExistingCertificatesFormatExport implements FromArray, WithHeadings, WithStyles
 {
-    public function __construct(private readonly CertificateTemplate $template) {}
+    public function __construct(private readonly ?CertificateTemplate $template) {}
 
     /**
      * Columns for registering certificates that were already issued offline:
@@ -18,9 +18,14 @@ class ExistingCertificatesFormatExport implements FromArray, WithHeadings, WithS
      *
      * @return array<string>
      */
-    public static function headingsFor(CertificateTemplate $template): array
+    public static function headingsFor(?CertificateTemplate $template): array
     {
         $defaults = ['certificate_number', 'full_name', 'email', 'completion_date', 'issue_date', 'expiry_date'];
+
+        if (! $template) {
+            // No template: the certificate carries its own credential title.
+            return array_merge($defaults, ['certificate_title']);
+        }
 
         $custom = $template->blocks()
             ->where('is_dynamic', true)
@@ -45,6 +50,7 @@ class ExistingCertificatesFormatExport implements FromArray, WithHeadings, WithS
             'completion_date' => now()->subYear()->format('Y-m-d'),
             'issue_date' => now()->subYear()->format('Y-m-d'),
             'expiry_date' => now()->addYear()->format('Y-m-d'),
+            'certificate_title' => 'Fire Safety Training',
         ];
 
         $row = [];

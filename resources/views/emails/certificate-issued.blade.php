@@ -1,7 +1,7 @@
 <x-mail::message>
 # Congratulations, {{ $certificate->recipient->full_name }}!
 
-You have been awarded the certificate **{{ $certificate->template->name }}**.
+You have been awarded the certificate **{{ $certificate->displayName() ?? $certificate->certificate_number }}**.
 
 <x-mail::panel>
 **Awarded to:** {{ $certificate->recipient->full_name }}<br>

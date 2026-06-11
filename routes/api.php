@@ -78,6 +78,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(functi
 
     Route::get('certificates', [CertificateController::class, 'index']);
     Route::get('certificates/stream', CertificateStreamController::class);
+    Route::get('certificates/import-existing-format', [RecipientImportController::class, 'existingFormat']);
+    Route::post('certificates/import-existing', [RecipientImportController::class, 'storeExisting']);
+    Route::post('certificates/attach-zip', [CertificateUploadController::class, 'storeZip']);
     Route::post('certificates/manual', [CertificateController::class, 'storeManual']);
     Route::post('certificates/bulk', [CertificateActionController::class, 'bulk']);
     Route::post('templates/{template:uuid}/send', [CertificateController::class, 'send']);

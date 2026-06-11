@@ -96,7 +96,7 @@ async function upload(event) {
                     <h1 class="font-mono text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">{{ certificate.certificate_number }}</h1>
                     <StatusBadge :status="certificate.deleted_at ? 'deleted' : certificate.status" />
                 </div>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ certificate.template?.name }}</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ certificate.template?.name || certificate.title || 'Offline certificate' }}</p>
             </div>
             <div class="flex flex-wrap gap-2 text-sm">
                 <button class="rounded-lg bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700" @click="store.download(certificate.uuid)">

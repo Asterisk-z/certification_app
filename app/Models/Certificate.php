@@ -21,6 +21,7 @@ class Certificate extends Model
         'recipient_id',
         'group_id',
         'certificate_number',
+        'title',
         'data',
         'completion_date',
         'issue_date',
@@ -88,12 +89,22 @@ class Certificate extends Model
         return $this->expiry_date !== null && $this->expiry_date->isPast();
     }
 
+    /**
+     * What this certificate certifies — the explicit title for offline
+     * imports, otherwise the template name.
+     */
+    public function displayName(): ?string
+    {
+        return $this->title ?? $this->template?->name;
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($term)).'%';
 
         return $query->where(function (Builder $q) use ($like) {
             $q->where('certificate_number', 'like', $like)
+                ->orWhere('title', 'like', $like)
                 ->orWhereHas('recipient', function (Builder $r) use ($like) {
                     $r->where('full_name', 'like', $like)->orWhere('email', 'like', $like);
                 })

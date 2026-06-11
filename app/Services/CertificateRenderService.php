@@ -19,6 +19,10 @@ class CertificateRenderService
     {
         $certificate->loadMissing('template.blocks', 'recipient');
         $template = $certificate->template;
+
+        if (! $template) {
+            throw new \RuntimeException('This certificate has no template to render — only its uploaded file is available.');
+        }
         $values = $this->resolver->resolve($certificate);
 
         $qrSvg = base64_encode(

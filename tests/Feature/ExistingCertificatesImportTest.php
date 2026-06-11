@@ -9,6 +9,7 @@ use App\Models\Recipient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
@@ -124,6 +125,72 @@ class ExistingCertificatesImportTest extends TestCase
             ['file' => $file, 'mode' => 'existing']
         )->assertUnprocessable()
             ->assertJsonFragment(['missing_columns' => ['certificate_number']]);
+    }
+
+    public function test_imports_without_template_using_certificate_title(): void
+    {
+        $file = $this->xlsx([
+            ['certificate_number', 'full_name', 'email', 'completion_date', 'issue_date', 'expiry_date', 'certificate_title'],
+            ['OLD/001', 'Jane Doe', 'jane@example.com', '', '2022-03-01', '2099-03-01', 'First Aid Level 2'],
+        ]);
+
+        $this->actingAs($this->admin)->postJson('/api/admin/certificates/import-existing', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('created', 1);
+
+        $certificate = Certificate::firstWhere('certificate_number', 'OLD/001');
+        $this->assertNull($certificate->certificate_template_id);
+        $this->assertEquals('First Aid Level 2', $certificate->title);
+        $this->assertEquals('sent', $certificate->status->value);
+
+        // Verifies publicly with the title as the credential name.
+        $this->getJson('/api/verify?number='.urlencode('OLD/001'))
+            ->assertOk()
+            ->assertJsonPath('result', 'valid')
+            ->assertJsonPath('certificate.template', 'First Aid Level 2');
+    }
+
+    public function test_templateless_format_download(): void
+    {
+        $this->actingAs($this->admin)
+            ->get('/api/admin/certificates/import-existing-format')
+            ->assertOk()
+            ->assertDownload('offline-existing-certificates-format.xlsx');
+    }
+
+    public function test_zip_attaches_files_by_certificate_number(): void
+    {
+        Storage::fake('local');
+
+        $a = Certificate::factory()->sent()->create([
+            'certificate_template_id' => $this->template->id,
+            'certificate_number' => 'HSE/2023/0042',
+        ]);
+        Certificate::factory()->sent()->create([
+            'certificate_template_id' => $this->template->id,
+            'certificate_number' => 'HSE-2023-0043',
+        ]);
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'zip').'.zip';
+        $zip = new \ZipArchive;
+        $zip->open($zipPath, \ZipArchive::CREATE);
+        $zip->addFromString('hse-2023-0042.pdf', '%PDF-fake-a');
+        $zip->addFromString('scans/HSE_2023_0043.PDF', '%PDF-fake-b');
+        $zip->addFromString('unrelated.pdf', '%PDF-orphan');
+        $zip->close();
+
+        $upload = new UploadedFile($zipPath, 'scans.zip', 'application/zip', null, true);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/admin/certificates/attach-zip', ['file' => $upload]);
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('attached'));
+        $this->assertEquals(['unrelated.pdf'], $response->json('unmatched'));
+
+        $a->refresh();
+        $this->assertNotNull($a->uploaded_file_path);
+        Storage::disk('local')->assertExists($a->uploaded_file_path);
     }
 
     public function test_expiry_falls_back_to_template_duration(): void

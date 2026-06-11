@@ -40,6 +40,80 @@ class RecipientImportController extends Controller
     }
 
     /**
+     * Format download for existing-certificate imports, template optional —
+     * without one, the file carries a certificate_title column instead of
+     * template fields.
+     */
+    public function existingFormat(Request $request): BinaryFileResponse
+    {
+        $template = $request->query('template_uuid')
+            ? CertificateTemplate::where('uuid', $request->query('template_uuid'))->firstOrFail()
+            : null;
+
+        $prefix = $template ? strtolower($template->code) : 'offline';
+
+        return Excel::download(
+            new ExistingCertificatesFormatExport($template),
+            $prefix.'-existing-certificates-format.xlsx'
+        );
+    }
+
+    /**
+     * Register certificates issued offline; template optional.
+     */
+    public function storeExisting(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            'group_uuid' => ['nullable', 'uuid', 'exists:groups,uuid'],
+            'template_uuid' => ['nullable', 'uuid', 'exists:certificate_templates,uuid'],
+        ]);
+
+        $template = isset($validated['template_uuid'])
+            ? CertificateTemplate::where('uuid', $validated['template_uuid'])->firstOrFail()
+            : null;
+
+        $expected = array_diff(
+            ExistingCertificatesFormatExport::headingsFor($template),
+            ['completion_date', 'expiry_date', 'certificate_title']
+        );
+        $found = collect((new HeadingRowImport)->toArray($validated['file'])[0][0] ?? [])
+            ->filter()->map(fn ($h) => strtolower(trim((string) $h)))->all();
+        $missing = array_values(array_diff($expected, $found));
+
+        if ($missing) {
+            return response()->json([
+                'message' => 'The file is missing required columns: '.implode(', ', $missing),
+                'missing_columns' => $missing,
+            ], 422);
+        }
+
+        $group = isset($validated['group_uuid'])
+            ? Group::where('uuid', $validated['group_uuid'])->firstOrFail()
+            : null;
+
+        $import = new ExistingCertificatesImport($template, $group);
+        Excel::import($import, $validated['file']);
+
+        activity()->causedBy($request->user())
+            ->withProperties(['template' => $template?->name, 'created' => $import->created, 'failed' => count($import->failures)])
+            ->log('existing_certificates_imported');
+
+        $request->user()->notify(new AdminAlertNotification(
+            'import_completed',
+            'Import completed',
+            "{$import->created} existing certificate(s) registered".
+                (count($import->failures) ? ', '.count($import->failures).' row(s) skipped.' : '.'),
+        ));
+
+        return response()->json([
+            'message' => "{$import->created} existing certificate(s) registered — verifiable immediately, no emails sent.",
+            'created' => $import->created,
+            'failures' => $import->failures,
+        ]);
+    }
+
+    /**
      * Import an Excel file. mode=new (default) creates pending certificates
      * with generated numbers for sending; mode=existing registers offline
      * certificates as already issued — original numbers, no emails.

@@ -46,7 +46,7 @@ class VerificationController extends Controller
             'certificate' => [
                 'number' => $certificate->certificate_number,
                 'holder' => $certificate->recipient->full_name,
-                'template' => $certificate->template->name,
+                'template' => $certificate->displayName() ?? 'Certificate',
                 'issue_date' => $certificate->issue_date->format('Y-m-d'),
                 'expiry_date' => $certificate->expiry_date?->format('Y-m-d'),
                 'revoked_at' => $certificate->revoked_at?->format('Y-m-d'),
