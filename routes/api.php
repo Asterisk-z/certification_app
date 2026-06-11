@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CertificateActionController;
 use App\Http\Controllers\Admin\CertificateController;
+use App\Http\Controllers\Admin\CertificateStreamController;
 use App\Http\Controllers\Admin\CertificateUploadController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GroupController;
@@ -76,6 +77,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(functi
     Route::post('templates/{template:uuid}/import', [RecipientImportController::class, 'store']);
 
     Route::get('certificates', [CertificateController::class, 'index']);
+    Route::get('certificates/stream', CertificateStreamController::class);
     Route::post('certificates/manual', [CertificateController::class, 'storeManual']);
     Route::post('certificates/bulk', [CertificateActionController::class, 'bulk']);
     Route::post('templates/{template:uuid}/send', [CertificateController::class, 'send']);

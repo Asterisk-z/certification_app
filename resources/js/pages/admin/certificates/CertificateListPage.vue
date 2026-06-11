@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import http from '@/api/http';
 import { useCertificatesStore } from '@/stores/certificates';
@@ -32,11 +32,26 @@ const tabs = [
 
 const showingDeleted = computed(() => store.filters.status === 'deleted');
 
+let eventSource = null;
+
 onMounted(async () => {
     store.fetch();
+
+    // Live updates: the server emits an event whenever any certificate
+    // changes (queue worker, imports, other admins). Skip the refresh while
+    // rows are selected or a dialog is open so in-progress work isn't lost.
+    eventSource = new EventSource('/api/admin/certificates/stream');
+    eventSource.addEventListener('certificates', () => {
+        if (!store.selected.length && !confirm.value && !store.loading) {
+            store.fetch();
+        }
+    });
+
     const { data } = await http.get('/admin/templates', { params: { per_page: 100 } });
     templates.value = data.data;
 });
+
+onBeforeUnmount(() => eventSource?.close());
 
 function setTab(key) {
     store.filters.status = key;
