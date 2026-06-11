@@ -14,10 +14,11 @@ mkdir -p \
     storage/logs
 chown -R www-data:www-data storage bootstrap/cache
 
-if [ -z "$APP_KEY" ]; then
-    echo "ERROR: APP_KEY is not set. Generate one with:"
-    echo "  docker compose run --rm app php artisan key:generate --show"
-    echo "and put it in your .env file."
+if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "CHANGE_ME" ]; then
+    echo "ERROR: APP_KEY is not set in your .env file. Generate and store one with:"
+    echo '  KEY=$(docker compose -f docker-compose.prod.yml run --rm --entrypoint php app artisan key:generate --show)'
+    echo '  sed -i "s|^APP_KEY=.*|APP_KEY=$KEY|" .env'
+    echo "then start the stack again."
     exit 1
 fi
 
