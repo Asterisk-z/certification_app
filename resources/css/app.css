@@ -1,0 +1,133 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+@source '../views';
+
+/* Class-based dark mode (toggled by the theme store on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    --color-brand-50: #eff6ff;
+    --color-brand-100: #dbeafe;
+    --color-brand-200: #bfdbfe;
+    --color-brand-300: #93c5fd;
+    --color-brand-400: #60a5fa;
+    --color-brand-500: #3b82f6;
+    --color-brand-600: #2563eb;
+    --color-brand-700: #1d4ed8;
+    --color-brand-800: #1e40af;
+    --color-brand-900: #1e3a8a;
+}
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+        color-scheme: light;
+    }
+
+    html.dark {
+        color-scheme: dark;
+    }
+
+    body {
+        @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    }
+
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        @apply transition-colors duration-150;
+    }
+
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-brand-500;
+    }
+
+    /* Dark surfaces for every form control without per-element classes
+       (@tailwindcss/forms gives them a hard-coded white background). */
+    .dark input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='color'])),
+    .dark select,
+    .dark textarea {
+        @apply border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500;
+    }
+
+    .dark input[type='checkbox'],
+    .dark input[type='radio'] {
+        @apply border-slate-600 bg-slate-800;
+    }
+
+    .dark select {
+        /* Forms-plugin chevron, redrawn light for dark surfaces. */
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    }
+}
+
+@layer components {
+    /* Surfaces ------------------------------------------------------------ */
+    .card {
+        @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:shadow-none dark:ring-slate-800;
+    }
+
+    .card-row {
+        @apply rounded-xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:shadow-none dark:ring-slate-800;
+    }
+
+    .empty-state {
+        @apply rounded-2xl border-2 border-dashed border-slate-200 bg-white text-center dark:border-slate-800 dark:bg-slate-900;
+    }
+
+    .thead {
+        @apply bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400;
+    }
+
+    /* Forms ---------------------------------------------------------------- */
+    .input {
+        @apply rounded-lg border-slate-300 bg-white text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500;
+    }
+
+    .checkbox {
+        @apply rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-brand-600;
+    }
+
+    .label {
+        @apply block text-sm font-medium text-slate-700 dark:text-slate-300;
+    }
+
+    /* Buttons --------------------------------------------------------------- */
+    .btn-primary {
+        @apply inline-flex items-center justify-center rounded-lg bg-brand-600 font-medium text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 dark:shadow-none;
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:shadow-none dark:hover:bg-slate-700;
+    }
+
+    .btn-danger {
+        @apply inline-flex items-center justify-center rounded-lg border border-rose-200 bg-white font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:bg-transparent dark:text-rose-400 dark:hover:bg-rose-950/50;
+    }
+
+    .btn-success {
+        @apply inline-flex items-center justify-center rounded-lg border border-emerald-300 bg-white font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-900 dark:bg-transparent dark:text-emerald-400 dark:hover:bg-emerald-950/50;
+    }
+
+    /* Notices --------------------------------------------------------------- */
+    .notice-success {
+        @apply rounded-lg bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300;
+    }
+
+    .notice-error {
+        @apply rounded-lg bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300;
+    }
+
+    .notice-warning {
+        @apply rounded-lg bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300;
+    }
+
+    .notice-info {
+        @apply rounded-lg bg-brand-50 text-brand-900 ring-1 ring-brand-100 dark:bg-brand-900/30 dark:text-brand-200 dark:ring-brand-900;
+    }
+}
