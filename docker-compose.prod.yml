@@ -1,0 +1,96 @@
+# Production stack for setup.certification.hseboard.com
+#
+# On the server:
+#   cp .env.production.example .env     # then fill in the values
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# The web container binds to 127.0.0.1:${WEB_PORT:-8090}; Caddy terminates
+# TLS and reverse-proxies the domain to it (see deploy/Caddyfile.example).
+
+services:
+  app:
+    build:
+      context: .
+      target: app
+    image: hse-credential-app
+    restart: unless-stopped
+    env_file: .env
+    environment: &app-env
+      DB_HOST: mysql
+      DB_PORT: 3306
+      CHROME_PATH: /usr/bin/chromium
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      target: web
+    image: hse-credential-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8090}:80"
+    volumes:
+      - storage:/var/www/html/storage:ro
+    depends_on:
+      - app
+
+  queue:
+    image: hse-credential-app
+    pull_policy: never
+    restart: unless-stopped
+    command: php artisan queue:work --queue=emails,default --tries=3 --backoff=60 --max-time=3600
+    env_file: .env
+    environment:
+      <<: *app-env
+      SKIP_BOOTSTRAP: "1"
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+
+  scheduler:
+    image: hse-credential-app
+    pull_policy: never
+    restart: unless-stopped
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    env_file: .env
+    environment:
+      <<: *app-env
+      SKIP_BOOTSTRAP: "1"
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-hse_credential}
+      MYSQL_USER: ${DB_USERNAME:-hse}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  storage:
+  mysql-data:
