@@ -1,20 +1,20 @@
-# Add this site block to the Caddyfile at /var/www/Caddyfile.
-# Caddy obtains and renews the TLS certificate automatically.
+# Add this site block to /var/www/Caddyfile, then reload Caddy:
+#   docker exec hsewebserver caddy reload --config /etc/caddy/Caddyfile
+#
+# The app's web container (setupcertificationhseboard) joins the shared
+# hse-app-network, so Caddy reaches it by container name — same pattern
+# as credentials.hseboard.com.
 
 setup.certification.hseboard.com {
-    # If Caddy runs directly on the host:
-    reverse_proxy 127.0.0.1:8090
 
-    # If Caddy runs inside Docker instead, replace the line above with
-    # one of these, depending on your setup:
-    #   reverse_proxy host.docker.internal:8090
-    # or attach this app's web container to Caddy's docker network and use:
-    #   reverse_proxy hse-credential-web:80
+    reverse_proxy setupcertificationhseboard:80 {
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote}
+    }
 
-    encode gzip
-
-    header {
-        Strict-Transport-Security "max-age=31536000"
-        X-Content-Type-Options "nosniff"
+    log {
+        output file /var/log/caddy/setupcertificationhseboard.log
+        format console
     }
 }

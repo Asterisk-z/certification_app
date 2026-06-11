@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->statefulApi();
 
+        // The app runs behind a reverse proxy (Caddy) in production —
+        // honour X-Forwarded-* so https URLs and signed links validate.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => EnsureRole::class,
         ]);

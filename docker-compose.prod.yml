@@ -1,11 +1,13 @@
 # Production stack for setup.certification.hseboard.com
 #
+# Designed for the hseboard server, where Caddy runs in Docker on the
+# external `hse-app-network` and proxies each site to a named container
+# (see deploy/Caddyfile.example). Only the web container joins that
+# network; everything else stays on a private internal network.
+#
 # On the server:
 #   cp .env.production.example .env     # then fill in the values
 #   docker compose -f docker-compose.prod.yml up -d --build
-#
-# The web container binds to 127.0.0.1:${WEB_PORT:-8090}; Caddy terminates
-# TLS and reverse-proxies the domain to it (see deploy/Caddyfile.example).
 
 services:
   app:
@@ -24,6 +26,8 @@ services:
       QUEUE_CONNECTION: database
     volumes:
       - storage:/var/www/html/storage
+    networks:
+      - internal
     depends_on:
       mysql:
         condition: service_healthy
@@ -33,11 +37,13 @@ services:
       context: .
       target: web
     image: hse-credential-web
+    container_name: setupcertificationhseboard
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${WEB_PORT:-8090}:80"
     volumes:
       - storage:/var/www/html/storage:ro
+    networks:
+      - internal
+      - hse-app-network
     depends_on:
       - app
 
@@ -52,6 +58,8 @@ services:
       SKIP_BOOTSTRAP: "1"
     volumes:
       - storage:/var/www/html/storage
+    networks:
+      - internal
     depends_on:
       app:
         condition: service_started
@@ -69,6 +77,8 @@ services:
       SKIP_BOOTSTRAP: "1"
     volumes:
       - storage:/var/www/html/storage
+    networks:
+      - internal
     depends_on:
       app:
         condition: service_started
@@ -85,11 +95,20 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
     volumes:
       - mysql-data:/var/lib/mysql
+    networks:
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
       retries: 20
+
+networks:
+  internal:
+  # Shared network that Caddy (hsewebserver) lives on — created by the
+  # root /var/www/docker-compose.yaml.
+  hse-app-network:
+    external: true
 
 volumes:
   storage:

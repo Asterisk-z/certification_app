@@ -100,8 +100,9 @@ server's Caddy. One-time setup:
 ```bash
 cd /var/www/setup.certification.hseboard.com
 cp .env.production.example .env        # fill in APP_KEY, DB + SMTP passwords
-# add the site block from deploy/Caddyfile.example to /var/www/Caddyfile, then reload Caddy
 docker compose -f docker-compose.prod.yml up -d --build
+# add the site block from deploy/Caddyfile.example to /var/www/Caddyfile, then:
+docker exec hsewebserver caddy reload --config /etc/caddy/Caddyfile
 ```
 
 Every later deploy (also what CI runs over SSH on pushes to main):
@@ -110,10 +111,10 @@ Every later deploy (also what CI runs over SSH on pushes to main):
 deploy/deploy.sh        # git pull + rebuild + restart the stack
 ```
 
-The web container binds to `127.0.0.1:8090` (`WEB_PORT` in `.env`); Caddy
-terminates TLS for `setup.certification.hseboard.com` and proxies to it.
-For CI auto-deploy, set the `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY`
-secrets on the GitHub repo.
+The web container is named `setupcertificationhseboard` and joins the shared
+`hse-app-network`, so Caddy proxies to it by container name (same pattern as
+the other hseboard sites). For CI auto-deploy, set the `DEPLOY_HOST` /
+`DEPLOY_USER` / `DEPLOY_SSH_KEY` secrets on the GitHub repo.
 
 ## Generic production notes
 
