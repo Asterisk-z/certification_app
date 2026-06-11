@@ -74,7 +74,7 @@ function pick(action) {
     <div ref="root" class="relative inline-block text-left">
         <button
             class="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-            @click.stop="toggle"
+            @click="toggle"
         >
             Actions ▾
         </button>
