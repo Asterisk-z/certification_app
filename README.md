@@ -112,9 +112,11 @@ Every later deploy (also what CI runs over SSH on pushes to main):
 deploy/deploy.sh        # git pull + rebuild + restart the stack
 ```
 
-The web container is named `setupcertificationhseboard` and joins the shared
-`hse-app-network`, so Caddy proxies to it by container name (same pattern as
-the other hseboard sites). For CI auto-deploy, set the `DEPLOY_HOST` /
+Production runs as a single container named `setupcertificationhseboard`
+(like the other hseboard sites): supervisord manages the HTTP server, queue
+worker and scheduler inside it, and it joins the shared `hse-app-network`
+so Caddy proxies to it by container name. Logs:
+`docker logs -f setupcertificationhseboard`. For CI auto-deploy, set the `DEPLOY_HOST` /
 `DEPLOY_USER` / `DEPLOY_SSH_KEY` secrets on the GitHub repo.
 
 ## Generic production notes

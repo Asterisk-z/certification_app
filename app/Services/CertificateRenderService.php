@@ -62,6 +62,8 @@ class CertificateRenderService
 
         $shot = Browsershot::html($this->html($certificate))
             ->noSandbox()
+            // Containers ship a tiny /dev/shm; without this Chromium can crash.
+            ->addChromiumArguments(['disable-dev-shm-usage'])
             ->showBackground()
             ->paperSize($this->pxToMm($template->bg_width), $this->pxToMm($template->bg_height))
             ->margins(0, 0, 0, 0)

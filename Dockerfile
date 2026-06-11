@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates gnupg \
         chromium \
         fonts-liberation fonts-dejavu-core fontconfig \
+        supervisor libcap2-bin \
         libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
         libzip-dev libicu-dev \
         zip unzip git default-mysql-client \
@@ -48,6 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_mysql gd zip bcmath exif pcntl intl opcache \
+    && setcap "cap_net_bind_service=+ep" /usr/local/bin/php \
     && apt-get -y autoremove && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -65,16 +67,22 @@ COPY --from=assets /app/public/build/ public/build/
 
 RUN cp -n .env.example .env \
     && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwx storage bootstrap/cache
+    && chmod -R ug+rwx storage bootstrap/cache \
+    # www-data's home — Chromium/puppeteer need a writable ~/.cache & ~/.config
+    && chown www-data:www-data /var/www
 
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/supervisord.conf /etc/supervisor/conf.d/app.conf
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENV CHROME_PATH=/usr/bin/chromium
 
-EXPOSE 9000
+# 9000 = php-fpm (nginx pairing), 80 = supervisor mode (artisan serve).
+EXPOSE 9000 80
 
 ENTRYPOINT ["entrypoint.sh"]
+# Default is php-fpm for the nginx pairing; production overrides this with
+# supervisord (web + queue + scheduler in one container).
 CMD ["php-fpm"]
 
 # ---------------------------------------------------------------------------
