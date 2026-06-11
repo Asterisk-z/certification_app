@@ -57,12 +57,12 @@ async function submit() {
             ...form,
             certificate_number: form.certificate_number || null,
         });
-        ui.success(`Certificate ${certificate.certificate_number} created.`);
+        ui.success(`Credential ${certificate.certificate_number} created.`);
         router.push({ name: 'admin.certificates.detail', params: { uuid: certificate.uuid } });
     } catch (e) {
         errors.value = e.response?.data?.errors || {};
         if (!Object.keys(errors.value).length) {
-            ui.error(e.response?.data?.message || 'Could not create the certificate.');
+            ui.error(e.response?.data?.message || 'Could not create the credential.');
         }
     } finally {
         saving.value = false;
@@ -72,9 +72,9 @@ async function submit() {
 
 <template>
     <div class="mx-auto max-w-3xl">
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Create certificate manually</h1>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Create credential manually</h1>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Issue a single certificate, optionally with your own certificate number.
+            Issue a single credential, optionally with your own certificate number.
         </p>
 
         <form class="mt-6 space-y-5 rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800" @submit.prevent="submit">
@@ -103,7 +103,7 @@ async function submit() {
                     <p v-if="errors.recipient_uuid" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.recipient_uuid[0] }}</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Certificate number (optional)</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Credential number (optional)</label>
                     <input
                         v-model="form.certificate_number" type="text" placeholder="Auto-generated when empty"
                         class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
@@ -140,7 +140,7 @@ async function submit() {
                     Cancel
                 </router-link>
                 <button type="submit" :disabled="saving" class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-                    {{ saving ? 'Creating…' : 'Create certificate' }}
+                    {{ saving ? 'Creating…' : 'Create credential' }}
                 </button>
             </div>
         </form>

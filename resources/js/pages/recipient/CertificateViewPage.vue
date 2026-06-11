@@ -20,13 +20,13 @@ function download(format = 'pdf') {
 <template>
     <div v-if="certificate">
         <router-link :to="{ name: 'portal.dashboard' }" class="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
-            ← Back to my certificates
+            ← Back to my credentials
         </router-link>
 
         <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">{{ certificate.template?.name || certificate.title || 'Certificate' }}</h1>
+                    <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">{{ certificate.template?.name || certificate.title || 'Credential' }}</h1>
                     <StatusBadge :status="certificate.status" />
                 </div>
                 <p class="mt-1 font-mono text-sm text-slate-500 dark:text-slate-400">{{ certificate.certificate_number }}</p>
@@ -56,7 +56,7 @@ function download(format = 'pdf') {
             <iframe
                 :src="`/c/${certificate.uuid}`"
                 class="aspect-[1123/794] w-full"
-                title="Certificate preview"
+                title="Credential preview"
             />
         </div>
 

@@ -30,7 +30,7 @@ class VerificationController extends Controller
         if (! $certificate || $certificate->trashed() || in_array($certificate->status, [CertificateStatus::Pending, CertificateStatus::Queued, CertificateStatus::Failed, CertificateStatus::Cancelled], true)) {
             return response()->json([
                 'result' => 'not_found',
-                'message' => 'No valid certificate was found for that number.',
+                'message' => 'No valid credential was found for that number.',
             ], 404);
         }
 
@@ -50,7 +50,7 @@ class VerificationController extends Controller
                 'issue_date' => $certificate->issue_date->format('Y-m-d'),
                 'expiry_date' => $certificate->expiry_date?->format('Y-m-d'),
                 'revoked_at' => $certificate->revoked_at?->format('Y-m-d'),
-                // Revoked certificates are not viewable publicly.
+                // Revoked credentials are not viewable publicly.
                 'view_url' => $certificate->status === CertificateStatus::Revoked
                     ? null
                     : url('/c/'.$certificate->uuid),

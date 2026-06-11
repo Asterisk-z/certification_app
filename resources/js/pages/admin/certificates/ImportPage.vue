@@ -23,13 +23,13 @@ const zipResult = ref(null);
 const modes = [
     {
         key: 'new',
-        title: 'New certificates',
-        text: 'Create pending certificates with generated numbers, then send them by email.',
+        title: 'New credentials',
+        text: 'Create pending credentials with generated numbers, then send them by email.',
     },
     {
         key: 'existing',
-        title: 'Existing (offline) certificates',
-        text: 'Register certificates already issued outside the system — original numbers are kept, they become verifiable immediately, and no emails are sent.',
+        title: 'Existing (offline) credentials',
+        text: 'Register credentials already issued outside the system — original numbers are kept, they become verifiable immediately, and no emails are sent.',
     },
 ];
 
@@ -105,9 +105,9 @@ async function submitZip() {
 
 <template>
     <div class="mx-auto max-w-3xl">
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Import certificates</h1>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Import credentials</h1>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Bring in recipients and certificates from an Excel file — new ones to send, or ones already issued offline.
+            Bring in recipients and credentials from an Excel file — new ones to send, or ones already issued offline.
         </p>
 
         <div class="mt-6 space-y-6 rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
@@ -135,7 +135,7 @@ async function submitZip() {
                     2 · Choose template{{ isExisting ? ' (optional)' : '' }}
                 </label>
                 <p v-if="isExisting" class="text-xs text-slate-400">
-                    Skip this when the certificates are finished documents that already contain the recipient's
+                    Skip this when the credentials are finished documents that already contain the recipient's
                     details — use the certificate_title column to say what each one certifies.
                 </p>
                 <select
@@ -210,14 +210,14 @@ async function submitZip() {
             <div v-if="result" class="space-y-3">
                 <div class="rounded-lg bg-emerald-50 dark:bg-emerald-950/50 p-4 text-sm text-emerald-800 dark:text-emerald-300">
                     <template v-if="isExisting">
-                        {{ result.created }} existing certificate(s) registered — they verify by their original numbers
+                        {{ result.created }} existing credential(s) registered — they verify by their original numbers
                         right away and appear in
-                        <router-link :to="{ name: 'admin.certificates' }" class="font-semibold underline">Certificates</router-link>.
+                        <router-link :to="{ name: 'admin.certificates' }" class="font-semibold underline">Credentials</router-link>.
                         No emails were sent.
                     </template>
                     <template v-else>
-                        {{ result.created }} certificate(s) created as pending. Go to
-                        <router-link :to="{ name: 'admin.certificates' }" class="font-semibold underline">Certificates</router-link>
+                        {{ result.created }} credential(s) created as pending. Go to
+                        <router-link :to="{ name: 'admin.certificates' }" class="font-semibold underline">Credentials</router-link>
                         to review and send them.
                     </template>
                 </div>
@@ -235,11 +235,11 @@ async function submitZip() {
         <!-- Bulk-attach scanned files -->
         <div v-if="isExisting" class="mt-6 space-y-4 rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
             <div>
-                <h2 class="font-semibold text-slate-900 dark:text-slate-100">Attach scanned certificates (optional)</h2>
+                <h2 class="font-semibold text-slate-900 dark:text-slate-100">Attach scanned credentials (optional)</h2>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    Upload a ZIP of PDFs named after the certificate numbers (e.g.
+                    Upload a ZIP of PDFs named after the credential numbers (e.g.
                     <code class="font-mono">HSE-2023-0042.pdf</code> matches HSE/2023/0042 — case and separators
-                    don't matter). Each match becomes that certificate's official document for viewing and download.
+                    don't matter). Each match becomes that credential's official document for viewing and download.
                 </p>
             </div>
             <input
@@ -260,7 +260,7 @@ async function submitZip() {
                     {{ zipResult.attached.length }} file(s) attached.
                 </div>
                 <div v-if="zipResult.unmatched?.length" class="rounded-lg bg-amber-50 dark:bg-amber-950/50 p-3 text-sm text-amber-900 dark:text-amber-300">
-                    <p class="font-semibold">{{ zipResult.unmatched.length }} file(s) had no matching certificate:</p>
+                    <p class="font-semibold">{{ zipResult.unmatched.length }} file(s) had no matching credential:</p>
                     <p class="mt-1 break-all text-xs">{{ zipResult.unmatched.join(', ') }}</p>
                 </div>
             </div>

@@ -24,7 +24,7 @@ async function logout() {
                     <ThemeToggle />
                     <NotificationsBell />
                     <router-link :to="{ name: 'portal.dashboard' }" class="rounded-lg px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" active-class="text-brand-700 dark:text-brand-300">
-                        Certificates
+                        Credentials
                     </router-link>
                     <router-link :to="{ name: 'portal.profile' }" class="rounded-lg px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" active-class="text-brand-700 dark:text-brand-300">
                         Profile

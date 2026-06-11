@@ -22,18 +22,18 @@ class CertificateExpiringNotification extends Notification implements ShouldQueu
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your certificate expires soon')
+            ->subject('Your credential expires soon')
             ->greeting('Hello '.$this->certificate->recipient->full_name.',')
-            ->line("Your certificate **{$this->certificate->certificate_number}** ({$this->certificate->template->name}) expires on {$this->certificate->expiry_date->format('d M Y')}.")
+            ->line("Your credential **{$this->certificate->certificate_number}** ({$this->certificate->template->name}) expires on {$this->certificate->expiry_date->format('d M Y')}.")
             ->line('Contact the issuer if it needs to be renewed.')
-            ->action('View certificate', url('/c/'.$this->certificate->uuid));
+            ->action('View credential', url('/c/'.$this->certificate->uuid));
     }
 
     public function toArray(object $notifiable): array
     {
         return [
             'type' => 'certificate_expiring',
-            'title' => 'Certificate expiring soon',
+            'title' => 'Credential expiring soon',
             'message' => "{$this->certificate->certificate_number} expires on {$this->certificate->expiry_date->format('d M Y')}.",
             'certificate_uuid' => $this->certificate->uuid,
         ];

@@ -43,7 +43,7 @@ function submit() {
                     Renew {{ certificate?.certificate_number }}
                 </h2>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    A new certificate is issued with the same details and a new number; this one is marked renewed.
+                    A new credential is issued with the same details and a new number; this one is marked renewed.
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="submit">
@@ -82,7 +82,7 @@ function submit() {
                             type="submit"
                             class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
                         >
-                            Renew certificate
+                            Renew credential
                         </button>
                     </div>
                 </form>

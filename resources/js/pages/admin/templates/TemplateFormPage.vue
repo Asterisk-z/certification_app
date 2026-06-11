@@ -102,7 +102,7 @@ async function submit() {
                         placeholder="e.g. FST"
                         class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 uppercase shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     />
-                    <p class="mt-1 text-xs text-slate-400">Certificate numbers become CODE-000001.</p>
+                    <p class="mt-1 text-xs text-slate-400">Credential numbers become CODE-000001.</p>
                     <p v-if="errors.code" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.code[0] }}</p>
                 </div>
                 <div>
@@ -144,7 +144,7 @@ async function submit() {
 
             <div>
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Background image</label>
-                <p class="text-xs text-slate-400">The image's pixel size defines the certificate canvas.</p>
+                <p class="text-xs text-slate-400">The image's pixel size defines the credential canvas.</p>
                 <div class="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start">
                     <label
                         class="flex aspect-[1123/794] w-full max-w-xs cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-sm text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20"

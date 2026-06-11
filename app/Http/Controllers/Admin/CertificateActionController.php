@@ -26,7 +26,7 @@ class CertificateActionController extends Controller
         $reason = $request->validate(['reason' => ['nullable', 'string', 'max:500']])['reason'] ?? null;
 
         if (! $certificate->transitionTo(CertificateStatus::Revoked)) {
-            return response()->json(['message' => "A {$certificate->status->value} certificate cannot be revoked."], 422);
+            return response()->json(['message' => "A {$certificate->status->value} credential cannot be revoked."], 422);
         }
 
         $certificate->revoked_at = now();
@@ -48,7 +48,7 @@ class CertificateActionController extends Controller
         $certificate = Certificate::where('uuid', $uuid)->firstOrFail();
 
         if ($certificate->status !== CertificateStatus::Revoked) {
-            return response()->json(['message' => 'Only revoked certificates can be restored.'], 422);
+            return response()->json(['message' => 'Only revoked credentials can be restored.'], 422);
         }
 
         // A revoked certificate returns to "sent" (or "expired" if past expiry).
@@ -66,7 +66,7 @@ class CertificateActionController extends Controller
         $certificate = Certificate::where('uuid', $uuid)->firstOrFail();
 
         if (! in_array($certificate->status, [CertificateStatus::Sent, CertificateStatus::Failed, CertificateStatus::Pending], true)) {
-            return response()->json(['message' => "A {$certificate->status->value} certificate cannot be resent."], 422);
+            return response()->json(['message' => "A {$certificate->status->value} credential cannot be resent."], 422);
         }
 
         // Failed/pending go through the queue transition; sent certificates
@@ -85,7 +85,7 @@ class CertificateActionController extends Controller
         $certificate = Certificate::where('uuid', $uuid)->firstOrFail();
 
         if (! in_array($certificate->status, [CertificateStatus::Sent, CertificateStatus::Expired], true)) {
-            return response()->json(['message' => 'Only sent or expired certificates can be renewed.'], 422);
+            return response()->json(['message' => 'Only sent or expired credentials can be renewed.'], 422);
         }
 
         $validated = $request->validate([
@@ -147,7 +147,7 @@ class CertificateActionController extends Controller
             ->withProperties(['action' => $action, 'requested' => count($validated['uuids']), 'affected' => $affected])
             ->log('certificates_bulk_'.$action);
 
-        return response()->json(['message' => "{$affected} certificate(s) {$action}d.", 'affected' => $affected]);
+        return response()->json(['message' => "{$affected} credential(s) {$action}d.", 'affected' => $affected]);
     }
 
     private function bulkRevoke(Certificate $certificate): bool
@@ -197,7 +197,7 @@ class CertificateActionController extends Controller
             'mailable_type' => CertificateRevokedMail::class,
             'certificate_id' => $certificate->id,
             'recipient_email' => $certificate->recipient->email,
-            'subject' => 'Certificate '.$certificate->certificate_number.' has been revoked',
+            'subject' => 'Credential '.$certificate->certificate_number.' has been revoked',
             'status' => 'queued',
         ]);
     }

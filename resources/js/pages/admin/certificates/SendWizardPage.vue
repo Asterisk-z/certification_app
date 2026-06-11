@@ -85,7 +85,7 @@ async function send() {
         ui.success(result.message);
         router.push({ name: 'admin.certificates' });
     } catch (e) {
-        ui.error(e.response?.data?.message || 'Could not queue the certificates.');
+        ui.error(e.response?.data?.message || 'Could not queue the credentials.');
     } finally {
         sending.value = false;
     }
@@ -94,7 +94,7 @@ async function send() {
 
 <template>
     <div class="mx-auto max-w-4xl">
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Send certificates</h1>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Send credentials</h1>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Choose a template, pick a group or individual recipients, set the dates, and queue the emails.
         </p>

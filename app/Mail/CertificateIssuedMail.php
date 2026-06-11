@@ -20,7 +20,7 @@ class CertificateIssuedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your certificate '.$this->certificate->certificate_number,
+            subject: 'Your credential '.$this->certificate->certificate_number,
         );
     }
 

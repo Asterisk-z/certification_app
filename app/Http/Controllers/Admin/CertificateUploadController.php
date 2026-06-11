@@ -100,7 +100,7 @@ class CertificateUploadController extends Controller
             ->log('certificate_files_zip_attached');
 
         return response()->json([
-            'message' => count($attached).' file(s) attached.'.(count($unmatched) ? ' '.count($unmatched).' file(s) had no matching certificate.' : ''),
+            'message' => count($attached).' file(s) attached.'.(count($unmatched) ? ' '.count($unmatched).' file(s) had no matching credential.' : ''),
             'attached' => $attached,
             'unmatched' => $unmatched,
         ]);

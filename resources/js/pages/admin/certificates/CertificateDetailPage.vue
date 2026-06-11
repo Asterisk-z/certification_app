@@ -19,7 +19,7 @@ const renewOpen = ref(false);
 
 async function confirmRenew(dates) {
     renewOpen.value = false;
-    await run('renew', 'Renewed — the new certificate is queued.', dates);
+    await run('renew', 'Renewed — the new credential is queued.', dates);
 }
 
 async function load() {
@@ -45,7 +45,7 @@ function revoke() {
         title: 'Revoke certificate?',
         message: 'The recipient will be notified by email and verification will report it as revoked.',
         confirmLabel: 'Revoke',
-        run: () => run('revoke', 'Certificate revoked.'),
+        run: () => run('revoke', 'Credential revoked.'),
     };
 }
 
@@ -57,7 +57,7 @@ function remove() {
         run: async () => {
             try {
                 await store.destroy(certificate.value.uuid);
-                ui.success('Certificate deleted.');
+                ui.success('Credential deleted.');
                 router.push({ name: 'admin.certificates' });
             } catch (e) {
                 ui.error(e.response?.data?.message || 'Action failed.');
@@ -87,7 +87,7 @@ async function upload(event) {
 <template>
     <div v-if="certificate" class="mx-auto max-w-4xl">
         <router-link :to="{ name: 'admin.certificates' }" class="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
-            ← Back to certificates
+            ← Back to credentials
         </router-link>
 
         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -112,7 +112,7 @@ async function upload(event) {
                 <button
                     v-if="['sent', 'failed', 'pending'].includes(certificate.status)"
                     class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                    @click="run('resend', 'Certificate queued for sending.')"
+                    @click="run('resend', 'Credential queued for sending.')"
                 >
                     {{ certificate.status === 'sent' ? 'Resend' : 'Send' }}
                 </button>
@@ -126,7 +126,7 @@ async function upload(event) {
                 <button
                     v-if="certificate.status === 'revoked'"
                     class="rounded-lg border border-emerald-300 dark:border-emerald-800 px-4 py-2 font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                    @click="run('unrevoke', 'Certificate restored.')"
+                    @click="run('unrevoke', 'Credential restored.')"
                 >
                     Un-revoke
                 </button>
@@ -140,7 +140,7 @@ async function upload(event) {
                 <button
                     v-if="certificate.deleted_at"
                     class="rounded-lg border border-emerald-300 dark:border-emerald-800 px-4 py-2 font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                    @click="run('restore', 'Certificate restored from deleted.')"
+                    @click="run('restore', 'Credential restored from deleted.')"
                 >
                     Restore
                 </button>
@@ -214,5 +214,5 @@ async function upload(event) {
             @confirm="confirmRenew"
         />
     </div>
-    <div v-else class="py-16 text-center text-sm text-slate-500 dark:text-slate-400">Loading certificate…</div>
+    <div v-else class="py-16 text-center text-sm text-slate-500 dark:text-slate-400">Loading credential…</div>
 </template>

@@ -29,7 +29,7 @@ class CertificateViewController extends Controller
             abort_unless(
                 $certificate->uploaded_file_path && Storage::disk('local')->exists($certificate->uploaded_file_path),
                 404,
-                'No viewable document for this certificate.'
+                'No viewable document for this credential.'
             );
 
             return Storage::disk('local')->response(

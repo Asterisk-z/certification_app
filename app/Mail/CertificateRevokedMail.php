@@ -18,7 +18,7 @@ class CertificateRevokedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Certificate '.$this->certificate->certificate_number.' has been revoked',
+            subject: 'Credential '.$this->certificate->certificate_number.' has been revoked',
         );
     }
 

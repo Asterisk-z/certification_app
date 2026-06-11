@@ -137,7 +137,7 @@ function set(field, value) {
                     class="rounded border-slate-300 dark:border-slate-700 text-brand-600 dark:text-brand-400 focus:ring-brand-500"
                     @change="set('is_visible', $event.target.checked)"
                 />
-                Visible on certificate
+                Visible on credential
             </label>
         </div>
 

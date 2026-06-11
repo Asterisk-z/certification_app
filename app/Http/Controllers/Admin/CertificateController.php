@@ -100,7 +100,7 @@ class CertificateController extends Controller
             ->withProperties(['count' => $certificates->count()])->log('certificates_queued');
 
         return response()->json([
-            'message' => $certificates->count().' certificate(s) queued for sending.',
+            'message' => $certificates->count().' credential(s) queued for sending.',
             'count' => $certificates->count(),
         ], 201);
     }
@@ -166,6 +166,6 @@ class CertificateController extends Controller
 
         activity()->performedOn($certificate)->causedBy($request->user())->log('certificate_deleted');
 
-        return response()->json(['message' => 'Certificate moved to deleted.']);
+        return response()->json(['message' => 'Credential moved to deleted.']);
     }
 }

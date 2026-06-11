@@ -62,7 +62,7 @@ class ExistingCertificatesImport implements ToCollection, WithHeadingRow
             $number = trim((string) $data['certificate_number']);
 
             if (Certificate::withTrashed()->where('certificate_number', $number)->exists()) {
-                $this->failures[] = ['row' => $rowNumber, 'errors' => ["Certificate {$number} already exists — skipped."]];
+                $this->failures[] = ['row' => $rowNumber, 'errors' => ["Credential {$number} already exists — skipped."]];
 
                 continue;
             }

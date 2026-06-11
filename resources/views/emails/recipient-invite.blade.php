@@ -1,10 +1,10 @@
 <x-mail::message>
 # Hello {{ $recipient->full_name }},
 
-You have certificates waiting for you on **{{ config('app.name') }}**.
+You have credentials waiting for you on **{{ config('app.name') }}**.
 
 Create a password to access your personal dashboard, where you can view,
-verify and download all certificates issued to you.
+verify and download all credentials issued to you.
 
 <x-mail::button :url="$inviteUrl">
 Create my password

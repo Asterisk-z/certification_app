@@ -75,7 +75,7 @@ async function confirmDelete() {
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Groups</h1>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Organise recipients to send certificates in bulk.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Organise recipients to send credentials in bulk.</p>
             </div>
             <button class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700" @click="openCreate">
                 + New group

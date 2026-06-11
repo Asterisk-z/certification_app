@@ -56,7 +56,7 @@ class SendCertificateJob implements ShouldQueue
             'mailable_type' => CertificateIssuedMail::class,
             'certificate_id' => $certificate->id,
             'recipient_email' => $certificate->recipient->email,
-            'subject' => 'Your certificate '.$certificate->certificate_number,
+            'subject' => 'Your credential '.$certificate->certificate_number,
             'status' => 'sent',
             'sent_at' => now(),
         ]);
@@ -83,7 +83,7 @@ class SendCertificateJob implements ShouldQueue
             'mailable_type' => CertificateIssuedMail::class,
             'certificate_id' => $certificate->id,
             'recipient_email' => $certificate->recipient->email,
-            'subject' => 'Your certificate '.$certificate->certificate_number,
+            'subject' => 'Your credential '.$certificate->certificate_number,
             'status' => 'failed',
             'error' => $exception?->getMessage(),
         ]);

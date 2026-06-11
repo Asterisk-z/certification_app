@@ -102,12 +102,12 @@ class RecipientImportController extends Controller
         $request->user()->notify(new AdminAlertNotification(
             'import_completed',
             'Import completed',
-            "{$import->created} existing certificate(s) registered".
+            "{$import->created} existing credential(s) registered".
                 (count($import->failures) ? ', '.count($import->failures).' row(s) skipped.' : '.'),
         ));
 
         return response()->json([
-            'message' => "{$import->created} existing certificate(s) registered — verifiable immediately, no emails sent.",
+            'message' => "{$import->created} existing credential(s) registered — verifiable immediately, no emails sent.",
             'created' => $import->created,
             'failures' => $import->failures,
         ]);
@@ -160,14 +160,14 @@ class RecipientImportController extends Controller
         $request->user()->notify(new AdminAlertNotification(
             'import_completed',
             'Import completed',
-            "{$import->created} certificate(s) ".($existing ? 'registered' : 'created')." for “{$template->name}”".
+            "{$import->created} credential(s) ".($existing ? 'registered' : 'created')." for “{$template->name}”".
                 (count($import->failures) ? ', '.count($import->failures).' row(s) skipped.' : '.'),
         ));
 
         return response()->json([
             'message' => $existing
-                ? "{$import->created} existing certificate(s) registered — verifiable immediately, no emails sent."
-                : "{$import->created} certificate(s) created as pending.",
+                ? "{$import->created} existing credential(s) registered — verifiable immediately, no emails sent."
+                : "{$import->created} credential(s) created as pending.",
             'created' => $import->created,
             'failures' => $import->failures,
         ]);

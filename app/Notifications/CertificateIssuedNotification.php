@@ -24,7 +24,7 @@ class CertificateIssuedNotification extends Notification implements ShouldQueue
     {
         return [
             'type' => 'certificate_issued',
-            'title' => 'New certificate issued',
+            'title' => 'New credential issued',
             'message' => "You received “{$this->certificate->displayName()}” ({$this->certificate->certificate_number}).",
             'certificate_uuid' => $this->certificate->uuid,
         ];

@@ -1,9 +1,9 @@
 <x-mail::message>
-# Certificate revoked
+# Credential revoked
 
 Hello {{ $certificate->recipient->full_name }},
 
-Your certificate **{{ $certificate->certificate_number }}** ({{ $certificate->template->name }})
+Your credential **{{ $certificate->certificate_number }}** ({{ $certificate->displayName() }})
 has been revoked and is no longer valid.
 
 @if ($reason)

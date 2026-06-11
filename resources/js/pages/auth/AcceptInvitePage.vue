@@ -65,7 +65,7 @@ async function submit() {
         <template v-else-if="recipient">
             <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100">Welcome, {{ recipient.full_name }}</h1>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Create a password for <strong>{{ recipient.email }}</strong> to access your certificates.
+                Create a password for <strong>{{ recipient.email }}</strong> to access your credentials.
             </p>
 
             <form class="mt-6 space-y-4" @submit.prevent="submit">

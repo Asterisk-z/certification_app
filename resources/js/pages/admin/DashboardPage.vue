@@ -29,7 +29,7 @@ function timeAgo(value) {
         <!-- Totals -->
         <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
             <div
-                v-for="(label, key) in { certificates: 'Certificates', recipients: 'Recipients', templates: 'Templates', groups: 'Groups', deleted: 'Deleted' }"
+                v-for="(label, key) in { certificates: 'Credentials', recipients: 'Recipients', templates: 'Templates', groups: 'Groups', deleted: 'Deleted' }"
                 :key="key"
                 class="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
             >
@@ -40,7 +40,7 @@ function timeAgo(value) {
 
         <!-- By status -->
         <div class="mt-6 rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
-            <h2 class="font-semibold text-slate-900 dark:text-slate-100">Certificates by status</h2>
+            <h2 class="font-semibold text-slate-900 dark:text-slate-100">Credentials by status</h2>
             <div class="mt-4 flex flex-wrap gap-3">
                 <router-link
                     v-for="status in statusOrder"

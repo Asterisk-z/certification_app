@@ -109,7 +109,7 @@ async function handle(certificate, action) {
             title: 'Revoke certificate?',
             message: `${certificate.certificate_number} will be marked invalid and the recipient notified by email.`,
             confirmLabel: 'Revoke',
-            run: () => runAction(certificate, 'revoke', 'Certificate revoked.'),
+            run: () => runAction(certificate, 'revoke', 'Credential revoked.'),
         };
         return;
     }
@@ -121,7 +121,7 @@ async function handle(certificate, action) {
             run: async () => {
                 try {
                     await store.destroy(certificate.uuid);
-                    ui.success('Certificate deleted. You can restore it from the Deleted tab.');
+                    ui.success('Credential deleted. You can restore it from the Deleted tab.');
                     store.fetch();
                 } catch (e) {
                     ui.error(e.response?.data?.message || 'Action failed.');
@@ -134,10 +134,10 @@ async function handle(certificate, action) {
     }
 
     const messages = {
-        resend: 'Certificate queued for sending.',
-        renew: 'Certificate renewed — the new one is queued for sending.',
-        unrevoke: 'Certificate restored.',
-        restore: 'Certificate restored from deleted.',
+        resend: 'Credential queued for sending.',
+        renew: 'Credential renewed — the new one is queued for sending.',
+        unrevoke: 'Credential restored.',
+        restore: 'Credential restored from deleted.',
     };
     await runAction(certificate, action, messages[action] || 'Done.');
 }
@@ -157,16 +157,16 @@ async function runAction(certificate, action, successMessage, payload = {}) {
 async function confirmRenew(dates) {
     const certificate = renewing.value;
     renewing.value = null;
-    await runAction(certificate, 'renew', 'Certificate renewed — the new one is queued for sending.', dates);
+    await runAction(certificate, 'renew', 'Credential renewed — the new one is queued for sending.', dates);
 }
 
 function bulk(action) {
     const labels = {
-        revoke: { title: 'Revoke selected?', message: `${store.selected.length} certificate(s) will be revoked and recipients emailed.`, confirmLabel: 'Revoke' },
-        cancel: { title: 'Cancel selected?', message: `${store.selected.length} certificate(s) will be cancelled. This cannot be undone.`, confirmLabel: 'Cancel them' },
-        delete: { title: 'Delete selected?', message: `${store.selected.length} certificate(s) will move to Deleted (restorable).`, confirmLabel: 'Delete' },
-        restore: { title: 'Restore selected?', message: `${store.selected.length} certificate(s) will be restored.`, confirmLabel: 'Restore' },
-        resend: { title: 'Resend selected?', message: `${store.selected.length} certificate(s) will be queued for sending.`, confirmLabel: 'Resend' },
+        revoke: { title: 'Revoke selected?', message: `${store.selected.length} credential(s) will be revoked and recipients emailed.`, confirmLabel: 'Revoke' },
+        cancel: { title: 'Cancel selected?', message: `${store.selected.length} credential(s) will be cancelled. This cannot be undone.`, confirmLabel: 'Cancel them' },
+        delete: { title: 'Delete selected?', message: `${store.selected.length} credential(s) will move to Deleted (restorable).`, confirmLabel: 'Delete' },
+        restore: { title: 'Restore selected?', message: `${store.selected.length} credential(s) will be restored.`, confirmLabel: 'Restore' },
+        resend: { title: 'Resend selected?', message: `${store.selected.length} credential(s) will be queued for sending.`, confirmLabel: 'Resend' },
     };
 
     confirm.value = {
@@ -194,7 +194,7 @@ function recipientName(certificate) {
     <div>
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Certificates</h1>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Credentials</h1>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Track, send, revoke and renew issued credentials.</p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -205,7 +205,7 @@ function recipientName(certificate) {
                     Manual create
                 </router-link>
                 <router-link :to="{ name: 'admin.certificates.send' }" class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
-                    Send certificates
+                    Send credentials
                 </router-link>
             </div>
         </div>
@@ -280,7 +280,7 @@ function recipientName(certificate) {
                         <td colspan="8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">Loading…</td>
                     </tr>
                     <tr v-else-if="!store.items.length">
-                        <td colspan="8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">No certificates found.</td>
+                        <td colspan="8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">No credentials found.</td>
                     </tr>
                     <tr v-for="c in store.items" v-else :key="c.uuid" class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                         <td class="px-4 py-3">
@@ -309,7 +309,7 @@ function recipientName(certificate) {
         <!-- Mobile cards -->
         <div class="mt-4 space-y-3 lg:hidden">
             <p v-if="store.loading" class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-            <p v-else-if="!store.items.length" class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">No certificates found.</p>
+            <p v-else-if="!store.items.length" class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">No credentials found.</p>
             <div
                 v-for="c in store.items" v-else :key="c.uuid"
                 class="rounded-2xl bg-white dark:bg-slate-900 p-4 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"

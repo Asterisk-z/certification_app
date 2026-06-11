@@ -22,8 +22,8 @@ class CertificateRevokedNotification extends Notification implements ShouldQueue
     {
         return [
             'type' => 'certificate_revoked',
-            'title' => 'Certificate revoked',
-            'message' => "Your certificate {$this->certificate->certificate_number} has been revoked.",
+            'title' => 'Credential revoked',
+            'message' => "Your credential {$this->certificate->certificate_number} has been revoked.",
             'certificate_uuid' => $this->certificate->uuid,
         ];
     }

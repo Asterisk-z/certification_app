@@ -50,7 +50,7 @@ async function confirmDelete() {
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Templates</h1>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Design certificate and credential templates.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Design credential templates.</p>
             </div>
             <router-link
                 :to="{ name: 'admin.templates.create' }"
@@ -78,7 +78,7 @@ async function confirmDelete() {
 
         <div v-else-if="!store.items.length" class="mt-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
             <p class="font-medium text-slate-900 dark:text-slate-100">No templates yet</p>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Create your first certificate template to get started.</p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Create your first credential template to get started.</p>
         </div>
 
         <div v-else class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -140,7 +140,7 @@ async function confirmDelete() {
         <ConfirmDialog
             :open="!!deleting"
             title="Delete template?"
-            :message="`'${deleting?.name}' will be removed. Certificates already issued from it are kept.`"
+            :message="`'${deleting?.name}' will be removed. Credentials already issued from it are kept.`"
             confirm-label="Delete"
             @confirm="confirmDelete"
             @cancel="deleting = null"

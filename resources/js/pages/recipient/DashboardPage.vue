@@ -34,17 +34,17 @@ function download(certificate, format = 'pdf') {
 <template>
     <div>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Welcome, {{ auth.user?.name }}</h1>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">All certificates issued to you, in one place.</p>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">All credentials issued to you, in one place.</p>
 
         <div class="mt-6">
-            <DebouncedSearchInput v-model="q" placeholder="Search your certificates…" @search="page = 1; load();" />
+            <DebouncedSearchInput v-model="q" placeholder="Search your credentials…" @search="page = 1; load();" />
         </div>
 
         <div v-if="loading" class="mt-10 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</div>
 
         <div v-else-if="!certificates.length" class="mt-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
-            <p class="font-medium text-slate-900 dark:text-slate-100">No certificates yet</p>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Certificates sent to you will appear here.</p>
+            <p class="font-medium text-slate-900 dark:text-slate-100">No credentials yet</p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Credentials sent to you will appear here.</p>
         </div>
 
         <div v-else class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -62,7 +62,7 @@ function download(certificate, format = 'pdf') {
                     <StatusBadge :status="certificate.status" class="absolute right-3 top-3" />
                 </div>
                 <div class="p-4">
-                    <h2 class="font-semibold text-slate-900 dark:text-slate-100">{{ certificate.template?.name || certificate.title || 'Certificate' }}</h2>
+                    <h2 class="font-semibold text-slate-900 dark:text-slate-100">{{ certificate.template?.name || certificate.title || 'Credential' }}</h2>
                     <p class="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ certificate.certificate_number }}</p>
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Issued {{ certificate.issue_date?.slice(0, 10) }}

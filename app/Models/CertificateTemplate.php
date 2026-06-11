@@ -29,7 +29,7 @@ class CertificateTemplate extends Model
         ['name' => 'Full Name', 'slug' => 'full_name', 'type' => 'text', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 200],
         ['name' => 'Completion Date', 'slug' => 'completion_date', 'type' => 'text', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 300],
         ['name' => 'Issue Date', 'slug' => 'issue_date', 'type' => 'text', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 400],
-        ['name' => 'Certificate Number', 'slug' => 'certificate_number', 'type' => 'text', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 500],
+        ['name' => 'Credential Number', 'slug' => 'certificate_number', 'type' => 'text', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 500],
         ['name' => 'QR Code', 'slug' => 'qr_code', 'type' => 'qrcode', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 600],
     ];
 

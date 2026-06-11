@@ -96,7 +96,7 @@ async function confirmDelete() {
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Recipients</h1>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">People who can receive certificates.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">People who can receive credentials.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button
@@ -134,7 +134,7 @@ async function confirmDelete() {
                         <th class="px-4 py-3">Name</th>
                         <th class="px-4 py-3">Email</th>
                         <th class="px-4 py-3">Groups</th>
-                        <th class="px-4 py-3">Certificates</th>
+                        <th class="px-4 py-3">Credentials</th>
                         <th class="px-4 py-3">Portal</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -195,7 +195,7 @@ async function confirmDelete() {
                     </span>
                 </div>
                 <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                    {{ r.certificates_count }} certificate(s)
+                    {{ r.certificates_count }} credential(s)
                     <template v-if="r.groups?.length"> · {{ r.groups.map((g) => g.name).join(', ') }}</template>
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2 text-sm">
@@ -259,7 +259,7 @@ async function confirmDelete() {
         <ConfirmDialog
             :open="!!deleting"
             title="Remove recipient?"
-            :message="`${deleting?.full_name} will be removed. Their issued certificates are kept.`"
+            :message="`${deleting?.full_name} will be removed. Their issued credentials are kept.`"
             confirm-label="Remove"
             @confirm="confirmDelete"
             @cancel="deleting = null"

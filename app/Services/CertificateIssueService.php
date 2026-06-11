@@ -16,7 +16,7 @@ class CertificateIssueService
     public function __construct(private readonly CertificateNumberService $numbers) {}
 
     /**
-     * Create certificates for a set of recipients and queue them for sending.
+     * Create credentials for a set of recipients and queue them for sending.
      *
      * @param  Collection<int, Recipient>  $recipients
      * @return Collection<int, Certificate>

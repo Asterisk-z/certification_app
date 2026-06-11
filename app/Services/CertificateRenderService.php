@@ -21,7 +21,7 @@ class CertificateRenderService
         $template = $certificate->template;
 
         if (! $template) {
-            throw new \RuntimeException('This certificate has no template to render — only its uploaded file is available.');
+            throw new \RuntimeException('This credential has no template to render — only its uploaded file is available.');
         }
         $values = $this->resolver->resolve($certificate);
 
@@ -126,7 +126,7 @@ class CertificateRenderService
     {
         if ($format === 'png') {
             if ($certificate->uploaded_file_path) {
-                throw new \RuntimeException('Only the manually uploaded PDF is available for this certificate.');
+                throw new \RuntimeException('Only the manually uploaded PDF is available for this credential.');
             }
 
             return $certificate->png_path && Storage::disk('local')->exists($certificate->png_path)
