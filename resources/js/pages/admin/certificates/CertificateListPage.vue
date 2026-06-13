@@ -34,26 +34,47 @@ const tabs = [
 
 const showingDeleted = computed(() => store.filters.status === 'deleted');
 
-let eventSource = null;
+let pollTimer = null;
+let lastSignature = null;
+
+// Live updates: poll a cheap change-signature every few seconds and refetch
+// only when it moves (queue worker marking sends, imports, other admins).
+// Skip the refresh while rows are selected or a dialog is open so in-progress
+// work isn't disrupted. A fast poll never holds a server connection open.
+async function pollChanges() {
+    try {
+        const { data } = await http.get('/admin/certificates/changes');
+
+        // Establish the baseline on the first tick.
+        if (lastSignature === null) {
+            lastSignature = data.signature;
+            return;
+        }
+
+        if (data.signature === lastSignature) return;
+
+        // Something changed. Refetch unless the user is mid-task — then leave
+        // the signature stale so the next idle tick picks it up (a refetch
+        // would clear their selection or interrupt an open dialog).
+        if (!store.selected.length && !confirm.value && !renewing.value && !store.loading) {
+            lastSignature = data.signature;
+            store.fetch();
+        }
+    } catch {
+        // Ignore transient poll errors; the next tick retries.
+    }
+}
 
 onMounted(async () => {
     store.fetch();
 
-    // Live updates: the server emits an event whenever any certificate
-    // changes (queue worker, imports, other admins). Skip the refresh while
-    // rows are selected or a dialog is open so in-progress work isn't lost.
-    eventSource = new EventSource('/api/admin/certificates/stream');
-    eventSource.addEventListener('certificates', () => {
-        if (!store.selected.length && !confirm.value && !renewing.value && !store.loading) {
-            store.fetch();
-        }
-    });
+    pollTimer = setInterval(pollChanges, 5000);
 
     const { data } = await http.get('/admin/templates', { params: { per_page: 100 } });
     templates.value = data.data;
 });
 
-onBeforeUnmount(() => eventSource?.close());
+onBeforeUnmount(() => clearInterval(pollTimer));
 
 function setTab(key) {
     store.filters.status = key;

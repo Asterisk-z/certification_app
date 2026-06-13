@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Certificate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,25 +12,32 @@ class CertificateStreamTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_stream_emits_sse_with_heartbeat(): void
+    public function test_changes_returns_signature_that_moves_on_change(): void
     {
         $admin = User::factory()->create(['role' => UserRole::Admin]);
 
-        $response = $this->actingAs($admin)->get('/api/admin/certificates/stream');
+        $first = $this->actingAs($admin)->getJson('/api/admin/certificates/changes')
+            ->assertOk()
+            ->json('signature');
 
-        $response->assertOk();
-        $this->assertStringStartsWith('text/event-stream', $response->headers->get('Content-Type'));
-        $this->assertEquals('no', $response->headers->get('X-Accel-Buffering'));
+        // No change yet — signature is stable.
+        $this->assertEquals(
+            $first,
+            $this->actingAs($admin)->getJson('/api/admin/certificates/changes')->json('signature')
+        );
 
-        $content = $response->streamedContent();
-        $this->assertStringContainsString('retry: 3000', $content);
-        $this->assertStringContainsString(': heartbeat', $content);
+        Certificate::factory()->sent()->create();
+
+        $this->assertNotEquals(
+            $first,
+            $this->actingAs($admin)->getJson('/api/admin/certificates/changes')->json('signature')
+        );
     }
 
-    public function test_stream_requires_admin(): void
+    public function test_changes_requires_admin(): void
     {
         $user = User::factory()->create(['role' => UserRole::Recipient]);
 
-        $this->actingAs($user)->get('/api/admin/certificates/stream')->assertForbidden();
+        $this->actingAs($user)->getJson('/api/admin/certificates/changes')->assertForbidden();
     }
 }
