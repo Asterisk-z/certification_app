@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import { useTemplatesStore } from '@/stores/templates';
 import { useUiStore } from '@/stores/ui';
@@ -53,21 +53,17 @@ onBeforeRouteLeave(() => {
     }
 });
 
-const rowRefs = new Map();
-
-function setRowRef(uuid, el) {
-    if (el) rowRefs.set(uuid, el);
-    else rowRefs.delete(uuid);
-}
-
 function placeholderFor(block) {
     return '{{' + block.slug + '}}';
 }
 
-// Selecting a block on the canvas brings its table row into view.
-watch(selectedUuid, (uuid) => {
-    if (uuid) rowRefs.get(uuid)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-});
+// Selecting a block on the canvas just highlights its row in place — no
+// scrolling, so the user stays on the canvas. Selecting from the table
+// instead brings the canvas (and the properties panel) back into view.
+function selectFromTable(uuid) {
+    selectedUuid.value = uuid;
+    canvasWrap.value?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
 
 function patchBlock(uuid, patch) {
     const block = blocks.value.find((b) => b.uuid === uuid);
@@ -262,12 +258,11 @@ async function addBlock() {
                         <tr
                             v-for="block in blocks"
                             :key="block.uuid"
-                            :ref="(el) => setRowRef(block.uuid, el)"
                             class="cursor-pointer transition-colors"
                             :class="block.uuid === selectedUuid
                                 ? 'bg-brand-50 dark:bg-brand-900/30 ring-1 ring-inset ring-brand-300 dark:ring-brand-800'
                                 : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'"
-                            @click="selectedUuid = block.uuid"
+                            @click="selectFromTable(block.uuid)"
                         >
                             <td class="px-4 py-3 sm:px-6">
                                 <p class="font-medium" :class="block.uuid === selectedUuid ? 'text-brand-700 dark:text-brand-300' : 'text-slate-900 dark:text-slate-100'">
