@@ -99,7 +99,7 @@ class RecipientImportTest extends TestCase
 
         $cert = Certificate::whereHas('recipient', fn ($q) => $q->where('email', 'jane@example.com'))->first();
         $this->assertEquals('pending', $cert->status->value);
-        $this->assertEquals('FST-000001', $cert->certificate_number);
+        $this->assertMatchesRegularExpression('/^FST-[A-Z2-9]{8}$/', $cert->certificate_number);
         $this->assertEquals('Fire Safety', $cert->data['course_title']);
         $this->assertEquals('2027-06-01', $cert->expiry_date->format('Y-m-d'));
         $this->assertTrue($group->recipients()->where('email', 'jane@example.com')->exists());

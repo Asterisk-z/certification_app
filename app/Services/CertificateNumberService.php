@@ -4,33 +4,45 @@ namespace App\Services;
 
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
-use Illuminate\Support\Facades\DB;
 
 class CertificateNumberService
 {
     /**
-     * Atomically reserve the next certificate number for a template
-     * (e.g. "FST-000123"). Skips over numbers that were taken manually.
+     * Unambiguous alphabet for the random part — no 0/O, 1/I/L so the number
+     * is easy to read and re-type from a printed credential.
+     */
+    private const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+    private const LENGTH = 8;
+
+    /**
+     * Generate a unique, non-sequential credential number for a template
+     * (e.g. "FST-7K3MQ9P2"). Random so numbers can't be guessed or counted,
+     * retried on the (astronomically rare) chance of a collision.
      */
     public function next(CertificateTemplate $template): string
     {
-        return DB::transaction(function () use ($template) {
-            $locked = CertificateTemplate::whereKey($template->id)->lockForUpdate()->first();
+        do {
+            $candidate = $this->format($template->code, $this->randomPart());
+        } while (Certificate::withTrashed()->where('certificate_number', $candidate)->exists());
 
-            do {
-                $locked->counter++;
-                $candidate = $this->format($locked->code, $locked->counter);
-            } while (Certificate::withTrashed()->where('certificate_number', $candidate)->exists());
-
-            $locked->save();
-            $template->counter = $locked->counter;
-
-            return $candidate;
-        });
+        return $candidate;
     }
 
-    public function format(string $code, int $n): string
+    public function format(string $code, string $random): string
     {
-        return strtoupper($code).'-'.str_pad((string) $n, 6, '0', STR_PAD_LEFT);
+        return strtoupper($code).'-'.$random;
+    }
+
+    private function randomPart(): string
+    {
+        $max = strlen(self::ALPHABET) - 1;
+        $out = '';
+
+        for ($i = 0; $i < self::LENGTH; $i++) {
+            $out .= self::ALPHABET[random_int(0, $max)];
+        }
+
+        return $out;
     }
 }

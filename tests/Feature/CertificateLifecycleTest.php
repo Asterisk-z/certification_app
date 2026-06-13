@@ -57,8 +57,11 @@ class CertificateLifecycleTest extends TestCase
         $this->assertEquals(3, Certificate::where('status', CertificateStatus::Queued)->count());
         Queue::assertPushed(SendCertificateJob::class, 3);
 
-        $numbers = Certificate::pluck('certificate_number')->sort()->values();
-        $this->assertEquals(['HSE-000001', 'HSE-000002', 'HSE-000003'], $numbers->all());
+        // Numbers are random (non-sequential) but unique and prefixed by the
+        // template code.
+        $numbers = Certificate::pluck('certificate_number');
+        $this->assertCount(3, $numbers->unique());
+        $numbers->each(fn ($number) => $this->assertMatchesRegularExpression('/^HSE-[A-Z2-9]{8}$/', $number));
     }
 
     public function test_send_to_individual_recipients(): void
