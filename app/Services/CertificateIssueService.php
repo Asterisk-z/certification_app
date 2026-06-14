@@ -72,12 +72,18 @@ class CertificateIssueService
     }
 
     /**
-     * Renew: mark the old certificate renewed and issue a fresh one with the
-     * same data but new dates and number. An explicit expiry date overrides
-     * the template's standard validity period.
+     * Renew: mark the old credential renewed and issue a fresh one with the
+     * same data but new dates and number. The new credential carries no
+     * cached document, so it is re-rendered from the template (with the new
+     * dates) when it is sent. An explicit expiry date overrides the
+     * template's standard validity period.
      */
-    public function renew(Certificate $certificate, ?Carbon $issueDate = null, ?Carbon $expiryDate = null): Certificate
-    {
+    public function renew(
+        Certificate $certificate,
+        ?Carbon $issueDate = null,
+        ?Carbon $expiryDate = null,
+        ?Carbon $completionDate = null,
+    ): Certificate {
         $issueDate = $issueDate ?: now();
         $template = $certificate->template;
 
@@ -86,7 +92,7 @@ class CertificateIssueService
             'group_id' => $certificate->group_id,
             'certificate_number' => $this->numbers->next($template),
             'data' => $certificate->data,
-            'completion_date' => $certificate->completion_date,
+            'completion_date' => $completionDate ?: $certificate->completion_date,
             'issue_date' => $issueDate,
             'expiry_date' => $expiryDate ?: $this->expiryFor($template, $issueDate),
             'status' => CertificateStatus::Pending,

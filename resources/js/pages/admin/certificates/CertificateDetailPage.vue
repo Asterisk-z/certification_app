@@ -117,7 +117,7 @@ async function upload(event) {
                     {{ certificate.status === 'sent' ? 'Resend' : 'Send' }}
                 </button>
                 <button
-                    v-if="['sent', 'expired'].includes(certificate.status)"
+                    v-if="['sent', 'expired'].includes(certificate.status) && certificate.template"
                     class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     @click="renewOpen = true"
                 >

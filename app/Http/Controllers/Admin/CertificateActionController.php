@@ -88,15 +88,32 @@ class CertificateActionController extends Controller
             return response()->json(['message' => 'Only sent or expired credentials can be renewed.'], 422);
         }
 
+        // Renewal re-renders the document from the template, so a credential
+        // without one (e.g. an offline import) can't be renewed.
+        if (! $certificate->certificate_template_id) {
+            return response()->json(['message' => 'This credential has no template, so it cannot be renewed and regenerated.'], 422);
+        }
+
         $validated = $request->validate([
             'issue_date' => ['nullable', 'date'],
+            'completion_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date', 'after:issue_date'],
         ]);
 
+        $issueDate = isset($validated['issue_date']) ? Carbon::parse($validated['issue_date']) : now();
+        $completionDate = isset($validated['completion_date'])
+            ? Carbon::parse($validated['completion_date'])
+            : $certificate->completion_date;
+
+        if ($completionDate && $completionDate->gt($issueDate)) {
+            return response()->json(['message' => 'The completion date cannot be after the issue date.'], 422);
+        }
+
         $new = $this->issuer->renew(
             $certificate,
-            isset($validated['issue_date']) ? Carbon::parse($validated['issue_date']) : null,
+            $issueDate,
             isset($validated['expiry_date']) ? Carbon::parse($validated['expiry_date']) : null,
+            $completionDate,
         );
 
         activity()->performedOn($certificate)->causedBy($request->user())

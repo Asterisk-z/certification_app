@@ -191,6 +191,53 @@ class CertificateLifecycleTest extends TestCase
             ])->assertUnprocessable();
     }
 
+    public function test_renew_rejects_completion_date_after_issue_date(): void
+    {
+        Queue::fake();
+        $certificate = Certificate::factory()->expired()->create(['certificate_template_id' => $this->template->id]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/admin/certificates/{$certificate->uuid}/renew", [
+                'issue_date' => '2026-06-10',
+                'completion_date' => '2026-06-12',
+            ])->assertUnprocessable();
+    }
+
+    public function test_renewed_credential_regenerates_from_template(): void
+    {
+        Queue::fake();
+        $certificate = Certificate::factory()->expired()->create([
+            'certificate_template_id' => $this->template->id,
+            'pdf_path' => 'certificates/old.pdf',
+            'png_path' => 'certificates/old.png',
+            'uploaded_file_path' => 'certificates/uploads/old-manual.pdf',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/admin/certificates/{$certificate->uuid}/renew", ['issue_date' => '2026-06-12'])
+            ->assertCreated();
+
+        // The renewed credential carries no cached document — it re-renders
+        // from the template when sent.
+        $new = Certificate::where('uuid', $response->json('uuid'))->first();
+        $this->assertNull($new->pdf_path);
+        $this->assertNull($new->png_path);
+        $this->assertNull($new->uploaded_file_path);
+        $this->assertEquals($this->template->id, $new->certificate_template_id);
+    }
+
+    public function test_renew_rejected_for_credential_without_template(): void
+    {
+        $certificate = Certificate::factory()->sent()->create([
+            'certificate_template_id' => null,
+            'title' => 'Offline credential',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/admin/certificates/{$certificate->uuid}/renew", ['issue_date' => '2026-06-12'])
+            ->assertUnprocessable();
+    }
+
     public function test_soft_delete_restore_and_deleted_listing(): void
     {
         $certificate = Certificate::factory()->sent()->create(['certificate_template_id' => $this->template->id]);

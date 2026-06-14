@@ -8,13 +8,14 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'confirm']);
 
-const form = reactive({ issue_date: '', expiry_date: '' });
+const form = reactive({ completion_date: '', issue_date: '', expiry_date: '' });
 const error = ref('');
 
 watch(
     () => props.open,
     (open) => {
         if (open) {
+            form.completion_date = props.certificate?.completion_date?.slice(0, 10) || '';
             form.issue_date = new Date().toISOString().slice(0, 10);
             form.expiry_date = '';
             error.value = '';
@@ -23,12 +24,17 @@ watch(
 );
 
 function submit() {
+    if (form.completion_date && form.completion_date > form.issue_date) {
+        error.value = 'The completion date cannot be after the issue date.';
+        return;
+    }
     if (form.expiry_date && form.expiry_date <= form.issue_date) {
         error.value = 'The valid-until date must be after the issue date.';
         return;
     }
     emit('confirm', {
         issue_date: form.issue_date,
+        ...(form.completion_date ? { completion_date: form.completion_date } : {}),
         ...(form.expiry_date ? { expiry_date: form.expiry_date } : {}),
     });
 }
@@ -47,6 +53,16 @@ function submit() {
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="submit">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Completion date</label>
+                        <input
+                            v-model="form.completion_date"
+                            type="date"
+                            :max="form.issue_date"
+                            class="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700"
+                        />
+                        <p class="mt-1 text-xs text-slate-400">Cannot be after the issue date.</p>
+                    </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Issue date</label>
                         <input
