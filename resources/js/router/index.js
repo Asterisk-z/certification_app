@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { startProgress, doneProgress } from '@/lib/progress';
 
 const routes = [
     // Public — verification is the landing page
@@ -71,6 +72,44 @@ const router = createRouter({
     scrollBehavior() {
         return { top: 0 };
     },
+});
+
+// Once signed in, warm every route's lazy chunk on idle so later page
+// changes are instant (the chunk is already downloaded). Done once, and
+// only for authenticated users so public visitors don't pull the whole app.
+let prefetched = false;
+
+function prefetchRouteChunks() {
+    router.getRoutes().forEach((route) => {
+        Object.values(route.components ?? {}).forEach((loader) => {
+            if (typeof loader === 'function') {
+                loader().catch(() => {});
+            }
+        });
+    });
+}
+
+function prefetchOnIdle() {
+    if (prefetched || !useAuthStore().isAuthenticated) {
+        return;
+    }
+    prefetched = true;
+    const schedule = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    schedule(prefetchRouteChunks);
+}
+
+// Show the top progress bar for the whole navigation (chunk fetch + guards).
+router.beforeEach(() => {
+    startProgress();
+});
+
+router.afterEach(() => {
+    doneProgress();
+    prefetchOnIdle();
+});
+
+router.onError(() => {
+    doneProgress();
 });
 
 router.beforeEach(async (to) => {
