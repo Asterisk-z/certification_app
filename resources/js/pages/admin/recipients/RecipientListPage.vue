@@ -15,6 +15,7 @@ const groups = ref([]);
 const deleting = ref(null);
 const modal = ref(false);
 const bulkModal = ref(false);
+const bulkConfirm = ref(null); // { title, message, confirmLabel, run }
 const editing = ref(null);
 const saving = ref(false);
 const errors = ref({});
@@ -89,6 +90,37 @@ async function confirmDelete() {
         deleting.value = null;
     }
 }
+
+function bulk(action) {
+    const count = store.selected.length;
+    const labels = {
+        invite: {
+            title: 'Send invites?',
+            message: `${count} recipient(s) will be emailed a link to set up their portal access.`,
+            confirmLabel: 'Send invites',
+        },
+        delete: {
+            title: 'Remove selected?',
+            message: `${count} recipient(s) will be removed. Their issued credentials are kept.`,
+            confirmLabel: 'Remove',
+        },
+    };
+
+    bulkConfirm.value = {
+        ...labels[action],
+        run: async () => {
+            try {
+                const result = await store.bulkAction(action);
+                ui.success(result.message);
+                store.fetch();
+            } catch (e) {
+                ui.error(e.response?.data?.message || 'Bulk action failed.');
+            } finally {
+                bulkConfirm.value = null;
+            }
+        },
+    };
+}
 </script>
 
 <template>
@@ -126,11 +158,30 @@ async function confirmDelete() {
             </select>
         </div>
 
+        <!-- Bulk action bar -->
+        <div
+            v-if="store.selected.length"
+            class="sticky top-2 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm text-white shadow-lg dark:bg-slate-800"
+        >
+            <span class="font-medium">{{ store.selected.length }} selected</span>
+            <span class="hidden text-slate-400 sm:inline">·</span>
+            <button class="rounded-lg bg-emerald-600 px-3 py-1.5 font-medium hover:bg-emerald-500" @click="bulk('invite')">Invite</button>
+            <button class="rounded-lg bg-rose-600 px-3 py-1.5 font-medium hover:bg-rose-500" @click="bulk('delete')">Delete</button>
+            <button class="ml-auto text-slate-300 hover:text-white" @click="store.selected = []">Clear</button>
+        </div>
+
         <!-- Desktop table -->
-        <div class="mt-6 hidden overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 md:block">
+        <div class="mt-4 hidden overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 md:block">
             <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <tr>
+                        <th class="w-10 px-4 py-3">
+                            <input
+                                type="checkbox" :checked="store.allSelected"
+                                class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600"
+                                @change="store.toggleSelectAll()"
+                            />
+                        </th>
                         <th class="px-4 py-3">Name</th>
                         <th class="px-4 py-3">Email</th>
                         <th class="px-4 py-3">Groups</th>
@@ -141,12 +192,18 @@ async function confirmDelete() {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <tr v-if="store.loading">
-                        <td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Loading…</td>
+                        <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Loading…</td>
                     </tr>
                     <tr v-else-if="!store.items.length">
-                        <td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No recipients found.</td>
+                        <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No recipients found.</td>
                     </tr>
                     <tr v-for="r in store.items" v-else :key="r.uuid" class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                        <td class="px-4 py-3">
+                            <input
+                                v-model="store.selected" type="checkbox" :value="r.uuid"
+                                class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600"
+                            />
+                        </td>
                         <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{{ r.full_name }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ r.email }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">
@@ -182,8 +239,12 @@ async function confirmDelete() {
                 :key="r.uuid"
                 class="rounded-2xl bg-white dark:bg-slate-900 p-4 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
             >
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
+                <div class="flex items-start gap-3">
+                    <input
+                        v-model="store.selected" type="checkbox" :value="r.uuid"
+                        class="mt-1 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600"
+                    />
+                    <div class="min-w-0 flex-1">
                         <p class="truncate font-semibold text-slate-900 dark:text-slate-100">{{ r.full_name }}</p>
                         <p class="truncate text-sm text-slate-500 dark:text-slate-400">{{ r.email }}</p>
                     </div>
@@ -263,6 +324,16 @@ async function confirmDelete() {
             confirm-label="Remove"
             @confirm="confirmDelete"
             @cancel="deleting = null"
+        />
+
+        <ConfirmDialog
+            :open="!!bulkConfirm"
+            :title="bulkConfirm?.title"
+            :message="bulkConfirm?.message"
+            :confirm-label="bulkConfirm?.confirmLabel"
+            :danger="bulkConfirm?.confirmLabel !== 'Send invites'"
+            @confirm="bulkConfirm.run()"
+            @cancel="bulkConfirm = null"
         />
     </div>
 </template>

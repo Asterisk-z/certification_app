@@ -154,3 +154,8 @@ resources/js           Vue SPA: pages/admin, pages/recipient, pages/public, comp
 resources/views        certificates/render.blade.php (the single source of truth for certificate markup),
                        emails/* (markdown mailables)
 ```
+
+
+ docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+
+

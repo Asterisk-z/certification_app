@@ -67,6 +67,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(functi
     Route::delete('blocks/{block:uuid}', [TemplateBlockController::class, 'destroy']);
 
     Route::post('recipients/bulk', [RecipientBulkController::class, 'store']);
+    Route::post('recipients/bulk-action', [RecipientBulkController::class, 'action']);
     Route::get('recipients/bulk-format', [RecipientBulkController::class, 'format']);
     Route::apiResource('recipients', RecipientController::class);
     Route::apiResource('groups', GroupController::class);

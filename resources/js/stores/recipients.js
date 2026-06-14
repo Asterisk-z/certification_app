@@ -7,7 +7,12 @@ export const useRecipientsStore = defineStore('recipients', {
         meta: null,
         loading: false,
         filters: { q: '', group: '', page: 1 },
+        selected: [],
     }),
+
+    getters: {
+        allSelected: (state) => state.items.length > 0 && state.selected.length === state.items.length,
+    },
 
     actions: {
         async fetch() {
@@ -16,9 +21,23 @@ export const useRecipientsStore = defineStore('recipients', {
                 const { data } = await http.get('/admin/recipients', { params: this.filters });
                 this.items = data.data;
                 this.meta = { current_page: data.current_page, last_page: data.last_page, total: data.total };
+                this.selected = [];
             } finally {
                 this.loading = false;
             }
+        },
+
+        toggleSelectAll() {
+            this.selected = this.allSelected ? [] : this.items.map((r) => r.uuid);
+        },
+
+        async bulkAction(action) {
+            await ensureCsrf();
+            const { data } = await http.post('/admin/recipients/bulk-action', {
+                action,
+                uuids: this.selected,
+            });
+            return data;
         },
 
         async create(payload) {

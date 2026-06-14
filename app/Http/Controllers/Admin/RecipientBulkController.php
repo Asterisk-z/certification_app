@@ -6,9 +6,11 @@ use App\Exports\RecipientsFormatExport;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Services\RecipientInviteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\HeadingRowImport;
@@ -91,6 +93,40 @@ class RecipientBulkController extends Controller
             'updated' => $updated,
             'failures' => $failures,
         ]);
+    }
+
+    /**
+     * Apply a bulk action (invite / delete) to selected recipients.
+     */
+    public function action(Request $request, RecipientInviteService $invites): JsonResponse
+    {
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(['invite', 'delete'])],
+            'uuids' => ['required', 'array', 'min:1', 'max:500'],
+            'uuids.*' => ['uuid'],
+        ]);
+
+        $recipients = Recipient::whereIn('uuid', $validated['uuids'])->get();
+        $affected = 0;
+
+        foreach ($recipients as $recipient) {
+            if ($validated['action'] === 'invite') {
+                $invites->send($recipient, $request->user());
+            } else {
+                $recipient->delete();
+            }
+            $affected++;
+        }
+
+        activity()->causedBy($request->user())
+            ->withProperties(['action' => $validated['action'], 'affected' => $affected])
+            ->log('recipients_bulk_'.$validated['action']);
+
+        $message = $validated['action'] === 'invite'
+            ? "Invite sent to {$affected} recipient(s)."
+            : "{$affected} recipient(s) removed.";
+
+        return response()->json(['message' => $message, 'affected' => $affected]);
     }
 
     /**
