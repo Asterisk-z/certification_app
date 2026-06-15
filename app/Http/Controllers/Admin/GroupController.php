@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
@@ -10,14 +11,18 @@ use Illuminate\Http\Request;
 
 class GroupController extends Controller
 {
+    use FiltersByOrganization;
+
     public function index(Request $request): JsonResponse
     {
-        $query = Group::query()->withCount('recipients')->latest();
+        $query = Group::query()->with('organization:id,uuid,name')->withCount('recipients')->latest();
 
         if ($search = trim((string) $request->query('q'))) {
             $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%';
             $query->where('name', 'like', $like);
         }
+
+        $this->applyOrganizationFilter($query, $request);
 
         return response()->json($query->paginate((int) $request->query('per_page', 15)));
     }

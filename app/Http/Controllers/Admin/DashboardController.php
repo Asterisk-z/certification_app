@@ -9,11 +9,12 @@ use App\Models\CertificateTemplate;
 use App\Models\Group;
 use App\Models\Recipient;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 
 class DashboardController extends Controller
 {
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
         $byStatus = Certificate::query()
             ->selectRaw('status, count(*) as total')
@@ -35,13 +36,16 @@ class DashboardController extends Controller
                 ->orderBy('expiry_date')
                 ->limit(8)
                 ->get(['id', 'uuid', 'certificate_number', 'recipient_id', 'certificate_template_id', 'expiry_date']),
-            'recent_activity' => Activity::with('causer:id,name')->latest()->limit(10)->get()
-                ->map(fn ($a) => [
-                    'id' => $a->id,
-                    'description' => $a->description,
-                    'causer' => $a->causer?->name,
-                    'created_at' => $a->created_at,
-                ]),
+            // Activity log isn't tenant-scoped, so only admins see it.
+            'recent_activity' => $request->user()->isAdmin()
+                ? Activity::with('causer:id,name')->latest()->limit(10)->get()
+                    ->map(fn ($a) => [
+                        'id' => $a->id,
+                        'description' => $a->description,
+                        'causer' => $a->causer?->name,
+                        'created_at' => $a->created_at,
+                    ])
+                : [],
         ]);
     }
 }

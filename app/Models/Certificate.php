@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CertificateStatus;
+use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,9 +15,10 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Certificate extends Model
 {
-    use HasFactory, HasUuid, LogsActivity, SoftDeletes;
+    use BelongsToOrganization, HasFactory, HasUuid, LogsActivity, SoftDeletes;
 
     protected $fillable = [
+        'organization_id',
         'certificate_template_id',
         'recipient_id',
         'group_id',

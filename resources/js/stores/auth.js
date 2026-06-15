@@ -10,7 +10,11 @@ export const useAuthStore = defineStore('auth', {
     getters: {
         isAuthenticated: (state) => !!state.user,
         isAdmin: (state) => state.user?.role === 'admin',
+        isOrganization: (state) => state.user?.role === 'organization',
         isRecipient: (state) => state.user?.role === 'recipient',
+        organization: (state) => state.user?.organization ?? null,
+        // Allowed features for an org user (admins are unrestricted).
+        features: (state) => state.user?.organization?.features ?? null,
     },
 
     actions: {

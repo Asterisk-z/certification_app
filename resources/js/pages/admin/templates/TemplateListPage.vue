@@ -2,13 +2,18 @@
 import { onMounted, ref } from 'vue';
 import { useTemplatesStore } from '@/stores/templates';
 import { useUiStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/auth';
+import { useOrgFilter } from '@/composables/useOrgFilter';
 import DebouncedSearchInput from '@/components/ui/DebouncedSearchInput.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import AppPagination from '@/components/ui/AppPagination.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import OrgFilterBanner from '@/components/ui/OrgFilterBanner.vue';
 
 const store = useTemplatesStore();
 const ui = useUiStore();
+const auth = useAuthStore();
+const orgFilter = useOrgFilter(store);
 const deleting = ref(null);
 
 onMounted(() => store.fetch());
@@ -74,6 +79,8 @@ async function confirmDelete() {
             </select>
         </div>
 
+        <OrgFilterBanner class="mt-4" :active="orgFilter.active.value" :org-name="orgFilter.orgName.value" @clear="orgFilter.clear" />
+
         <div v-if="store.loading" class="mt-10 text-center text-sm text-slate-500 dark:text-slate-400">Loading templates…</div>
 
         <div v-else-if="!store.items.length" class="mt-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
@@ -103,6 +110,9 @@ async function confirmDelete() {
                         <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                             {{ template.code }} · {{ template.certificates_count }} issued
                             <template v-if="template.duration"> · valid {{ template.duration }} {{ template.duration_type }}(s)</template>
+                        </p>
+                        <p v-if="auth.isAdmin" class="mt-0.5 text-xs font-medium text-slate-400 dark:text-slate-500">
+                            {{ template.organization?.name || 'Platform (admin)' }}
                         </p>
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2 text-sm">

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DurationType;
 use App\Enums\TemplateStatus;
+use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class CertificateTemplate extends Model
 {
-    use HasFactory, HasUuid, LogsActivity, SoftDeletes;
+    use BelongsToOrganization, HasFactory, HasUuid, LogsActivity, SoftDeletes;
 
     /**
      * Default dynamic blocks seeded onto every new template. Slugs here are
@@ -36,6 +37,7 @@ class CertificateTemplate extends Model
     public const RESERVED_SLUGS = ['full_name', 'email', 'completion_date', 'issue_date', 'certificate_number', 'qr_code'];
 
     protected $fillable = [
+        'organization_id',
         'user_id',
         'name',
         'code',

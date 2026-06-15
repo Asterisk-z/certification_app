@@ -2,12 +2,17 @@
 import { onMounted, reactive, ref } from 'vue';
 import { useGroupsStore } from '@/stores/recipients';
 import { useUiStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/auth';
+import { useOrgFilter } from '@/composables/useOrgFilter';
 import DebouncedSearchInput from '@/components/ui/DebouncedSearchInput.vue';
 import AppPagination from '@/components/ui/AppPagination.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import OrgFilterBanner from '@/components/ui/OrgFilterBanner.vue';
 
 const store = useGroupsStore();
 const ui = useUiStore();
+const auth = useAuthStore();
+const orgFilter = useOrgFilter(store);
 
 const modal = ref(false);
 const editing = ref(null);
@@ -86,6 +91,8 @@ async function confirmDelete() {
             <DebouncedSearchInput v-model="store.filters.q" placeholder="Search groups…" @search="search" />
         </div>
 
+        <OrgFilterBanner class="mt-4" :active="orgFilter.active.value" :org-name="orgFilter.orgName.value" @clear="orgFilter.clear" />
+
         <div v-if="store.loading" class="mt-10 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</div>
         <div v-else-if="!store.items.length" class="mt-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
             <p class="font-medium text-slate-900 dark:text-slate-100">No groups yet</p>
@@ -95,6 +102,7 @@ async function confirmDelete() {
         <div v-else class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <div v-for="group in store.items" :key="group.uuid" class="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
                 <h2 class="font-semibold text-slate-900 dark:text-slate-100">{{ group.name }}</h2>
+                <p v-if="auth.isAdmin" class="text-xs font-medium text-slate-400 dark:text-slate-500">{{ group.organization?.name || 'Platform (admin)' }}</p>
                 <p class="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ group.description || 'No description' }}</p>
                 <p class="mt-3 text-sm font-medium text-slate-700 dark:text-slate-300">{{ group.recipients_count }} recipient(s)</p>
                 <div class="mt-4 flex flex-wrap gap-2 text-sm">

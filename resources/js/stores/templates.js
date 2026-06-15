@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import http, { ensureCsrf } from '@/api/http';
+import { apiBase } from '@/api/area';
 
 export const useTemplatesStore = defineStore('templates', {
     state: () => ({
@@ -7,14 +8,14 @@ export const useTemplatesStore = defineStore('templates', {
         meta: null,
         current: null,
         loading: false,
-        filters: { q: '', status: '', page: 1 },
+        filters: { q: '', status: '', organization: '', page: 1 },
     }),
 
     actions: {
         async fetch() {
             this.loading = true;
             try {
-                const { data } = await http.get('/admin/templates', { params: this.filters });
+                const { data } = await http.get(`${apiBase()}/templates`, { params: this.filters });
                 this.items = data.data;
                 this.meta = { current_page: data.current_page, last_page: data.last_page, total: data.total };
             } finally {
@@ -23,14 +24,14 @@ export const useTemplatesStore = defineStore('templates', {
         },
 
         async fetchOne(uuid) {
-            const { data } = await http.get(`/admin/templates/${uuid}`);
+            const { data } = await http.get(`${apiBase()}/templates/${uuid}`);
             this.current = data;
             return data;
         },
 
         async create(formData) {
             await ensureCsrf();
-            const { data } = await http.post('/admin/templates', formData, {
+            const { data } = await http.post(`${apiBase()}/templates`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return data;
@@ -39,7 +40,7 @@ export const useTemplatesStore = defineStore('templates', {
         async update(uuid, formData) {
             await ensureCsrf();
             formData.append('_method', 'PUT');
-            const { data } = await http.post(`/admin/templates/${uuid}`, formData, {
+            const { data } = await http.post(`${apiBase()}/templates/${uuid}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return data;
@@ -47,19 +48,19 @@ export const useTemplatesStore = defineStore('templates', {
 
         async destroy(uuid) {
             await ensureCsrf();
-            await http.delete(`/admin/templates/${uuid}`);
+            await http.delete(`${apiBase()}/templates/${uuid}`);
             this.items = this.items.filter((t) => t.uuid !== uuid);
         },
 
         async duplicate(uuid) {
             await ensureCsrf();
-            const { data } = await http.post(`/admin/templates/${uuid}/duplicate`);
+            const { data } = await http.post(`${apiBase()}/templates/${uuid}/duplicate`);
             return data;
         },
 
         async saveLayout(uuid, blocks) {
             await ensureCsrf();
-            const { data } = await http.put(`/admin/templates/${uuid}/layout`, { blocks });
+            const { data } = await http.put(`${apiBase()}/templates/${uuid}/layout`, { blocks });
             this.current = data;
             return data;
         },
@@ -67,7 +68,7 @@ export const useTemplatesStore = defineStore('templates', {
         async addBlock(uuid, payload) {
             await ensureCsrf();
             const isForm = payload instanceof FormData;
-            const { data } = await http.post(`/admin/templates/${uuid}/blocks`, payload, {
+            const { data } = await http.post(`${apiBase()}/templates/${uuid}/blocks`, payload, {
                 headers: isForm ? { 'Content-Type': 'multipart/form-data' } : {},
             });
             return data;
@@ -77,18 +78,18 @@ export const useTemplatesStore = defineStore('templates', {
             await ensureCsrf();
             if (payload instanceof FormData) {
                 payload.append('_method', 'PUT');
-                const { data } = await http.post(`/admin/blocks/${blockUuid}`, payload, {
+                const { data } = await http.post(`${apiBase()}/blocks/${blockUuid}`, payload, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 return data;
             }
-            const { data } = await http.put(`/admin/blocks/${blockUuid}`, payload);
+            const { data } = await http.put(`${apiBase()}/blocks/${blockUuid}`, payload);
             return data;
         },
 
         async deleteBlock(blockUuid) {
             await ensureCsrf();
-            await http.delete(`/admin/blocks/${blockUuid}`);
+            await http.delete(`${apiBase()}/blocks/${blockUuid}`);
         },
     },
 });

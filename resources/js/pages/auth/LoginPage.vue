@@ -20,7 +20,8 @@ async function submit() {
         if (redirect) {
             router.push(redirect);
         } else {
-            router.push(user.role === 'admin' ? { name: 'admin.dashboard' } : { name: 'portal.dashboard' });
+            const home = { admin: 'admin.dashboard', organization: 'org.dashboard', recipient: 'portal.dashboard' };
+            router.push({ name: home[user.role] || 'login' });
         }
     } catch (e) {
         errors.value = e.response?.data?.errors || { email: [e.response?.data?.message || 'Login failed.'] };

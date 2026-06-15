@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,9 +15,10 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Recipient extends Model
 {
-    use HasFactory, HasUuid, LogsActivity, SoftDeletes;
+    use BelongsToOrganization, HasFactory, HasUuid, LogsActivity, SoftDeletes;
 
     protected $fillable = [
+        'organization_id',
         'user_id',
         'full_name',
         'email',

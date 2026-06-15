@@ -49,6 +49,10 @@ const routes = [
             { path: 'recipients', name: 'admin.recipients', component: () => import('@/pages/admin/recipients/RecipientListPage.vue') },
             { path: 'groups', name: 'admin.groups', component: () => import('@/pages/admin/recipients/GroupListPage.vue') },
             { path: 'groups/:uuid', name: 'admin.groups.detail', component: () => import('@/pages/admin/recipients/GroupDetailPage.vue') },
+            { path: 'organizations', name: 'admin.organizations', component: () => import('@/pages/admin/organizations/OrganizationListPage.vue') },
+            { path: 'organizations/create', name: 'admin.organizations.create', component: () => import('@/pages/admin/organizations/OrganizationFormPage.vue') },
+            { path: 'organizations/:uuid', name: 'admin.organizations.detail', component: () => import('@/pages/admin/organizations/OrganizationDetailPage.vue') },
+            { path: 'organizations/:uuid/edit', name: 'admin.organizations.edit', component: () => import('@/pages/admin/organizations/OrganizationFormPage.vue') },
             { path: 'certificates', name: 'admin.certificates', component: () => import('@/pages/admin/certificates/CertificateListPage.vue') },
             { path: 'certificates/send', name: 'admin.certificates.send', component: () => import('@/pages/admin/certificates/SendWizardPage.vue') },
             { path: 'certificates/import', name: 'admin.certificates.import', component: () => import('@/pages/admin/certificates/ImportPage.vue') },
@@ -59,6 +63,28 @@ const routes = [
             { path: 'logs/mail', name: 'admin.logs.mail', component: () => import('@/pages/admin/logs/MailLogPage.vue') },
             { path: 'logs/activity', name: 'admin.logs.activity', component: () => import('@/pages/admin/logs/ActivityLogPage.vue') },
             { path: 'changelog', name: 'admin.changelog', component: () => import('@/pages/admin/ChangelogPage.vue') },
+        ],
+    },
+
+    // Organization portal — reuses the admin screens, scoped to the org.
+    {
+        path: '/org',
+        component: () => import('@/layouts/OrgLayout.vue'),
+        meta: { requiresAuth: true, role: 'organization' },
+        children: [
+            { path: '', name: 'org.dashboard', component: () => import('@/pages/admin/DashboardPage.vue') },
+            { path: 'templates', name: 'org.templates', component: () => import('@/pages/admin/templates/TemplateListPage.vue') },
+            { path: 'templates/create', name: 'org.templates.create', component: () => import('@/pages/admin/templates/TemplateFormPage.vue') },
+            { path: 'templates/:uuid/edit', name: 'org.templates.edit', component: () => import('@/pages/admin/templates/TemplateFormPage.vue') },
+            { path: 'templates/:uuid/designer', name: 'org.templates.designer', component: () => import('@/pages/admin/templates/TemplateDesignerPage.vue') },
+            { path: 'recipients', name: 'org.recipients', component: () => import('@/pages/admin/recipients/RecipientListPage.vue') },
+            { path: 'groups', name: 'org.groups', component: () => import('@/pages/admin/recipients/GroupListPage.vue') },
+            { path: 'groups/:uuid', name: 'org.groups.detail', component: () => import('@/pages/admin/recipients/GroupDetailPage.vue') },
+            { path: 'certificates', name: 'org.certificates', component: () => import('@/pages/admin/certificates/CertificateListPage.vue') },
+            { path: 'certificates/send', name: 'org.certificates.send', component: () => import('@/pages/admin/certificates/SendWizardPage.vue') },
+            { path: 'certificates/import', name: 'org.certificates.import', component: () => import('@/pages/admin/certificates/ImportPage.vue') },
+            { path: 'certificates/manual', name: 'org.certificates.manual', component: () => import('@/pages/admin/certificates/ManualCreatePage.vue') },
+            { path: 'certificates/:uuid', name: 'org.certificates.detail', component: () => import('@/pages/admin/certificates/CertificateDetailPage.vue') },
         ],
     },
 
@@ -123,9 +149,26 @@ router.onError(() => {
     doneProgress();
 });
 
+function roleHome(auth) {
+    if (auth.isAdmin) return { name: 'admin.dashboard' };
+    if (auth.isOrganization) return { name: 'org.dashboard' };
+    if (auth.isRecipient) return { name: 'portal.dashboard' };
+    return { name: 'login' };
+}
+
 router.beforeEach(async (to) => {
     const auth = useAuthStore();
     await auth.hydrate();
+
+    // Organizations reuse the admin screens, whose links/redirects use admin.*
+    // route names. Transparently steer an org user to the org.* equivalent so
+    // the shared components don't need to know which portal they render in.
+    if (auth.isOrganization && typeof to.name === 'string' && to.name.startsWith('admin.')) {
+        const orgName = 'org.'.concat(to.name.slice('admin.'.length));
+        if (router.hasRoute(orgName)) {
+            return { name: orgName, params: to.params, query: to.query };
+        }
+    }
 
     if (to.meta.requiresAuth && !auth.isAuthenticated) {
         return { name: 'login', query: { redirect: to.fullPath } };
@@ -133,13 +176,11 @@ router.beforeEach(async (to) => {
 
     if (to.meta.role && auth.user?.role !== to.meta.role) {
         // Send the user to the dashboard that matches their role.
-        if (auth.isAdmin) return { name: 'admin.dashboard' };
-        if (auth.isRecipient) return { name: 'portal.dashboard' };
-        return { name: 'login' };
+        return roleHome(auth);
     }
 
     if (to.meta.guestOnly && auth.isAuthenticated) {
-        return auth.isAdmin ? { name: 'admin.dashboard' } : { name: 'portal.dashboard' };
+        return roleHome(auth);
     }
 
     return true;

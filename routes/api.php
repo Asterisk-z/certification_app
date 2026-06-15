@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GroupController;
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\NewsletterController;
+use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\RecipientBulkController;
 use App\Http\Controllers\Admin\RecipientController;
 use App\Http\Controllers\Admin\RecipientImportController;
@@ -60,62 +61,94 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // ---------------------------------------------------------------------------
-// Admin
+// Shared tenant management — used by both the admin area (/admin, sees all)
+// and the organization portal (/org, scoped to the org by the
+// BelongsToOrganization global scope). Defined once so the two portals stay
+// in lock-step.
 // ---------------------------------------------------------------------------
-Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::apiResource('templates', TemplateController::class)->scoped(['template' => 'uuid']);
-    Route::post('templates/{template:uuid}/duplicate', [TemplateController::class, 'duplicate']);
-    Route::put('templates/{template:uuid}/layout', [TemplateDesignerController::class, 'saveLayout']);
+$tenantRoutes = function () {
+    // Feature middleware gates org access (admins always pass). Grouped by the
+    // feature an organization may be limited to.
+    Route::middleware('feature:templates')->group(function () {
+        Route::apiResource('templates', TemplateController::class)->scoped(['template' => 'uuid']);
+        Route::post('templates/{template:uuid}/duplicate', [TemplateController::class, 'duplicate']);
+        Route::put('templates/{template:uuid}/layout', [TemplateDesignerController::class, 'saveLayout']);
 
-    Route::post('templates/{template:uuid}/blocks', [TemplateBlockController::class, 'store']);
-    Route::match(['put', 'post'], 'blocks/{block:uuid}', [TemplateBlockController::class, 'update']);
-    Route::delete('blocks/{block:uuid}', [TemplateBlockController::class, 'destroy']);
+        Route::post('templates/{template:uuid}/blocks', [TemplateBlockController::class, 'store']);
+        Route::match(['put', 'post'], 'blocks/{block:uuid}', [TemplateBlockController::class, 'update']);
+        Route::delete('blocks/{block:uuid}', [TemplateBlockController::class, 'destroy']);
+    });
 
-    Route::post('recipients/bulk', [RecipientBulkController::class, 'store']);
-    Route::post('recipients/bulk-action', [RecipientBulkController::class, 'action']);
-    Route::get('recipients/bulk-format', [RecipientBulkController::class, 'format']);
-    Route::apiResource('recipients', RecipientController::class);
-    Route::apiResource('groups', GroupController::class);
-    Route::post('groups/{group:uuid}/recipients', [GroupController::class, 'addRecipients']);
-    Route::delete('groups/{group:uuid}/recipients/{recipient:uuid}', [GroupController::class, 'removeRecipient']);
+    Route::middleware('feature:recipients')->group(function () {
+        Route::post('recipients/bulk', [RecipientBulkController::class, 'store']);
+        Route::post('recipients/bulk-action', [RecipientBulkController::class, 'action']);
+        Route::get('recipients/bulk-format', [RecipientBulkController::class, 'format']);
+        Route::apiResource('recipients', RecipientController::class);
+        Route::post('recipients/{recipient:uuid}/invite', [RecipientInviteController::class, 'store']);
+    });
 
-    Route::get('templates/{template:uuid}/import-format', [RecipientImportController::class, 'format']);
-    Route::post('templates/{template:uuid}/import', [RecipientImportController::class, 'store']);
+    Route::middleware('feature:groups')->group(function () {
+        Route::apiResource('groups', GroupController::class);
+        Route::post('groups/{group:uuid}/recipients', [GroupController::class, 'addRecipients']);
+        Route::delete('groups/{group:uuid}/recipients/{recipient:uuid}', [GroupController::class, 'removeRecipient']);
+    });
 
-    Route::get('certificates', [CertificateController::class, 'index']);
-    Route::get('certificates/changes', CertificateStreamController::class);
-    Route::get('certificates/import-existing-format', [RecipientImportController::class, 'existingFormat']);
-    Route::post('certificates/import-existing', [RecipientImportController::class, 'storeExisting']);
-    Route::post('certificates/attach-zip', [CertificateUploadController::class, 'storeZip']);
-    Route::post('certificates/manual', [CertificateController::class, 'storeManual']);
-    Route::post('certificates/bulk', [CertificateActionController::class, 'bulk']);
-    Route::post('templates/{template:uuid}/send', [CertificateController::class, 'send']);
-    Route::get('certificates/{uuid}', [CertificateController::class, 'show']);
-    Route::get('certificates/{uuid}/download', [CertificateController::class, 'download']);
-    Route::delete('certificates/{uuid}', [CertificateController::class, 'destroy']);
-    Route::post('certificates/{uuid}/revoke', [CertificateActionController::class, 'revoke']);
-    Route::post('certificates/{uuid}/unrevoke', [CertificateActionController::class, 'unrevoke']);
-    Route::post('certificates/{uuid}/resend', [CertificateActionController::class, 'resend']);
-    Route::post('certificates/{uuid}/renew', [CertificateActionController::class, 'renew']);
-    Route::post('certificates/{uuid}/restore', [CertificateActionController::class, 'restore']);
-    Route::post('certificates/{uuid}/upload', [CertificateUploadController::class, 'store']);
-    Route::delete('certificates/{uuid}/upload', [CertificateUploadController::class, 'destroy']);
+    Route::middleware('feature:certificates')->group(function () {
+        Route::get('templates/{template:uuid}/import-format', [RecipientImportController::class, 'format']);
+        Route::post('templates/{template:uuid}/import', [RecipientImportController::class, 'store']);
 
-    Route::post('recipients/{recipient:uuid}/invite', [RecipientInviteController::class, 'store']);
+        Route::get('certificates', [CertificateController::class, 'index']);
+        Route::get('certificates/changes', CertificateStreamController::class);
+        Route::get('certificates/import-existing-format', [RecipientImportController::class, 'existingFormat']);
+        Route::post('certificates/import-existing', [RecipientImportController::class, 'storeExisting']);
+        Route::post('certificates/attach-zip', [CertificateUploadController::class, 'storeZip']);
+        Route::post('certificates/manual', [CertificateController::class, 'storeManual']);
+        Route::post('certificates/bulk', [CertificateActionController::class, 'bulk']);
+        Route::post('templates/{template:uuid}/send', [CertificateController::class, 'send']);
+        Route::get('certificates/{uuid}', [CertificateController::class, 'show']);
+        Route::get('certificates/{uuid}/download', [CertificateController::class, 'download']);
+        Route::delete('certificates/{uuid}', [CertificateController::class, 'destroy']);
+        Route::post('certificates/{uuid}/revoke', [CertificateActionController::class, 'revoke']);
+        Route::post('certificates/{uuid}/unrevoke', [CertificateActionController::class, 'unrevoke']);
+        Route::post('certificates/{uuid}/resend', [CertificateActionController::class, 'resend']);
+        Route::post('certificates/{uuid}/renew', [CertificateActionController::class, 'renew']);
+        Route::post('certificates/{uuid}/restore', [CertificateActionController::class, 'restore']);
+        Route::post('certificates/{uuid}/upload', [CertificateUploadController::class, 'store']);
+        Route::delete('certificates/{uuid}/upload', [CertificateUploadController::class, 'destroy']);
+    });
+
+    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+};
+
+// ---------------------------------------------------------------------------
+// Admin — shared tenant routes (global, sees every org) plus admin-only areas.
+// ---------------------------------------------------------------------------
+Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () use ($tenantRoutes) {
+    $tenantRoutes();
 
     Route::get('newsletters', [NewsletterController::class, 'index']);
     Route::post('newsletters', [NewsletterController::class, 'store']);
     Route::get('newsletters/{newsletter:uuid}', [NewsletterController::class, 'show']);
 
+    Route::post('organizations/{organization:uuid}/resend-setup', [OrganizationController::class, 'resendSetup']);
+    Route::patch('organizations/{organization:uuid}/settings', [OrganizationController::class, 'updateSettings']);
+    Route::get('organizations/{organization:uuid}/stats', [OrganizationController::class, 'stats']);
+    Route::apiResource('organizations', OrganizationController::class)->scoped(['organization' => 'uuid']);
+
     Route::get('logs/mail', [LogController::class, 'mail']);
     Route::get('logs/activity', [LogController::class, 'activity']);
-    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
 
     Route::get('release-notes', [ReleaseNoteController::class, 'index']);
     Route::post('release-notes', [ReleaseNoteController::class, 'store']);
     Route::put('release-notes/{releaseNote:uuid}', [ReleaseNoteController::class, 'update']);
     Route::delete('release-notes/{releaseNote:uuid}', [ReleaseNoteController::class, 'destroy']);
 });
+
+// ---------------------------------------------------------------------------
+// Organization portal — same management surface, scoped to the org. Must be an
+// active organization (EnsureActiveOrganization).
+// ---------------------------------------------------------------------------
+Route::prefix('org')->middleware(['auth:sanctum', 'role:organization', 'org.active'])->group($tenantRoutes);
 
 // ---------------------------------------------------------------------------
 // Recipient portal

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
+use App\Models\Concerns\BelongsToOrganization;
 
 class CertificateNumberService
 {
@@ -34,9 +35,22 @@ class CertificateNumberService
     {
         do {
             $candidate = $this->format($code, $this->randomPart());
-        } while (Certificate::withTrashed()->where('certificate_number', $candidate)->exists());
+        } while ($this->numberExists($candidate));
 
         return $candidate;
+    }
+
+    /**
+     * Certificate numbers are the public verifier key and must be unique across
+     * every organization, so the existence probe ignores the org global scope
+     * (an org user would otherwise only see collisions within its own tenant).
+     */
+    private function numberExists(string $number): bool
+    {
+        return Certificate::withoutGlobalScope(BelongsToOrganization::class)
+            ->withTrashed()
+            ->where('certificate_number', $number)
+            ->exists();
     }
 
     public function format(string $code, string $random): string

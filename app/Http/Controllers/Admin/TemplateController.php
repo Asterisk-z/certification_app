@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TemplateRequest;
 use App\Models\CertificateTemplate;
@@ -11,11 +12,14 @@ use Illuminate\Http\Request;
 
 class TemplateController extends Controller
 {
+    use FiltersByOrganization;
+
     public function __construct(private readonly TemplateService $templates) {}
 
     public function index(Request $request): JsonResponse
     {
         $query = CertificateTemplate::query()
+            ->with('organization:id,uuid,name')
             ->withCount(['blocks', 'certificates'])
             ->latest();
 
@@ -27,6 +31,8 @@ class TemplateController extends Controller
         if ($status = $request->query('status')) {
             $query->where('status', $status);
         }
+
+        $this->applyOrganizationFilter($query, $request);
 
         return response()->json($query->paginate((int) $request->query('per_page', 12)));
     }

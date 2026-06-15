@@ -2,7 +2,9 @@
 import { onMounted, ref } from 'vue';
 import http from '@/api/http';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import { useAuthStore } from '@/stores/auth';
 
+const auth = useAuthStore();
 const stats = ref(null);
 
 const statusOrder = ['pending', 'queued', 'sent', 'failed', 'revoked', 'expired', 'renewed', 'cancelled'];
@@ -70,8 +72,8 @@ function timeAgo(value) {
                 </ul>
             </div>
 
-            <!-- Recent activity -->
-            <div class="rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+            <!-- Recent activity (admin only — the activity log isn't tenant-scoped) -->
+            <div v-if="auth.isAdmin" class="rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold text-slate-900 dark:text-slate-100">Recent activity</h2>
                     <router-link :to="{ name: 'admin.logs.activity' }" class="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\CertificateStatus;
+use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
@@ -20,11 +21,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CertificateController extends Controller
 {
+    use FiltersByOrganization;
+
     public function __construct(private readonly CertificateIssueService $issuer) {}
 
     public function index(Request $request): JsonResponse
     {
-        $query = Certificate::query()->with(['recipient:id,uuid,full_name,email', 'template:id,uuid,name,code'])->latest();
+        $query = Certificate::query()->with(['recipient:id,uuid,full_name,email', 'template:id,uuid,name,code', 'organization:id,uuid,name'])->latest();
 
         $status = $request->query('status');
 
@@ -41,6 +44,8 @@ class CertificateController extends Controller
         if ($search = trim((string) $request->query('q'))) {
             $query->search($search);
         }
+
+        $this->applyOrganizationFilter($query, $request);
 
         return response()->json($query->paginate((int) $request->query('per_page', 15)));
     }

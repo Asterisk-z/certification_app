@@ -2,14 +2,19 @@
 import { onMounted, reactive, ref } from 'vue';
 import { useRecipientsStore, useGroupsStore } from '@/stores/recipients';
 import { useUiStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/auth';
+import { useOrgFilter } from '@/composables/useOrgFilter';
 import DebouncedSearchInput from '@/components/ui/DebouncedSearchInput.vue';
 import AppPagination from '@/components/ui/AppPagination.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import OrgFilterBanner from '@/components/ui/OrgFilterBanner.vue';
 import BulkAddRecipientsModal from '@/components/recipients/BulkAddRecipientsModal.vue';
 
 const store = useRecipientsStore();
 const groupsStore = useGroupsStore();
 const ui = useUiStore();
+const auth = useAuthStore();
+const orgFilter = useOrgFilter(store);
 
 const groups = ref([]);
 const deleting = ref(null);
@@ -158,6 +163,8 @@ function bulk(action) {
             </select>
         </div>
 
+        <OrgFilterBanner class="mt-4" :active="orgFilter.active.value" :org-name="orgFilter.orgName.value" @clear="orgFilter.clear" />
+
         <!-- Bulk action bar -->
         <div
             v-if="store.selected.length"
@@ -184,6 +191,7 @@ function bulk(action) {
                         </th>
                         <th class="px-4 py-3">Name</th>
                         <th class="px-4 py-3">Email</th>
+                        <th v-if="auth.isAdmin" class="px-4 py-3">Organization</th>
                         <th class="px-4 py-3">Groups</th>
                         <th class="px-4 py-3">Credentials</th>
                         <th class="px-4 py-3">Portal</th>
@@ -192,10 +200,10 @@ function bulk(action) {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <tr v-if="store.loading">
-                        <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Loading…</td>
+                        <td :colspan="auth.isAdmin ? 8 : 7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Loading…</td>
                     </tr>
                     <tr v-else-if="!store.items.length">
-                        <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No recipients found.</td>
+                        <td :colspan="auth.isAdmin ? 8 : 7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No recipients found.</td>
                     </tr>
                     <tr v-for="r in store.items" v-else :key="r.uuid" class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                         <td class="px-4 py-3">
@@ -206,6 +214,7 @@ function bulk(action) {
                         </td>
                         <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{{ r.full_name }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ r.email }}</td>
+                        <td v-if="auth.isAdmin" class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ r.organization?.name || 'Platform' }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">
                             <span v-if="!r.groups?.length" class="text-slate-400">—</span>
                             <span v-else>{{ r.groups.map((g) => g.name).join(', ') }}</span>
@@ -247,6 +256,7 @@ function bulk(action) {
                     <div class="min-w-0 flex-1">
                         <p class="truncate font-semibold text-slate-900 dark:text-slate-100">{{ r.full_name }}</p>
                         <p class="truncate text-sm text-slate-500 dark:text-slate-400">{{ r.email }}</p>
+                        <p v-if="auth.isAdmin" class="truncate text-xs font-medium text-slate-400 dark:text-slate-500">{{ r.organization?.name || 'Platform' }}</p>
                     </div>
                     <span
                         class="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"

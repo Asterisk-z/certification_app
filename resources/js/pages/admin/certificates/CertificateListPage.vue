@@ -4,16 +4,21 @@ import { useRouter } from 'vue-router';
 import http from '@/api/http';
 import { useCertificatesStore } from '@/stores/certificates';
 import { useUiStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/auth';
+import { useOrgFilter } from '@/composables/useOrgFilter';
 import DebouncedSearchInput from '@/components/ui/DebouncedSearchInput.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import AppPagination from '@/components/ui/AppPagination.vue';
 import ActionDropdown from '@/components/ui/ActionDropdown.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import OrgFilterBanner from '@/components/ui/OrgFilterBanner.vue';
 import RenewDialog from '@/components/certificates/RenewDialog.vue';
 
 const store = useCertificatesStore();
 const ui = useUiStore();
 const router = useRouter();
+const auth = useAuthStore();
+const orgFilter = useOrgFilter(store);
 
 const templates = ref([]);
 const confirm = ref(null); // { title, message, confirmLabel, run }
@@ -259,6 +264,8 @@ function recipientName(certificate) {
             </select>
         </div>
 
+        <OrgFilterBanner class="mt-4" :active="orgFilter.active.value" :org-name="orgFilter.orgName.value" @clear="orgFilter.clear" />
+
         <!-- Bulk action bar -->
         <div
             v-if="store.selected.length"
@@ -293,6 +300,7 @@ function recipientName(certificate) {
                         <th class="px-4 py-3">Number</th>
                         <th class="px-4 py-3">Recipient</th>
                         <th class="px-4 py-3">Template</th>
+                        <th v-if="auth.isAdmin" class="px-4 py-3">Organization</th>
                         <th class="px-4 py-3">Issued</th>
                         <th class="px-4 py-3">Expires</th>
                         <th class="px-4 py-3">Status</th>
@@ -301,10 +309,10 @@ function recipientName(certificate) {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <tr v-if="store.loading">
-                        <td colspan="8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">Loading…</td>
+                        <td :colspan="auth.isAdmin ? 9 : 8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">Loading…</td>
                     </tr>
                     <tr v-else-if="!store.items.length">
-                        <td colspan="8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">No credentials found.</td>
+                        <td :colspan="auth.isAdmin ? 9 : 8" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400">No credentials found.</td>
                     </tr>
                     <tr v-for="c in store.items" v-else :key="c.uuid" class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                         <td class="px-4 py-3">
@@ -319,6 +327,7 @@ function recipientName(certificate) {
                             <p class="text-xs text-slate-500 dark:text-slate-400">{{ c.recipient?.email }}</p>
                         </td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.template?.name || c.title || '—' }}</td>
+                        <td v-if="auth.isAdmin" class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.organization?.name || 'Platform' }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.issue_date?.slice(0, 10) }}</td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ c.expiry_date?.slice(0, 10) || 'Never' }}</td>
                         <td class="px-4 py-3"><StatusBadge :status="showingDeleted ? 'deleted' : c.status" /></td>
@@ -350,6 +359,7 @@ function recipientName(certificate) {
                         </div>
                         <p class="mt-1 truncate font-medium text-slate-900 dark:text-slate-100">{{ recipientName(c) }}</p>
                         <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ c.template?.name || c.title || '—' }}</p>
+                        <p v-if="auth.isAdmin" class="truncate text-xs font-medium text-slate-400 dark:text-slate-500">{{ c.organization?.name || 'Platform' }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             Issued {{ c.issue_date?.slice(0, 10) }} · expires {{ c.expiry_date?.slice(0, 10) || 'never' }}
                         </p>

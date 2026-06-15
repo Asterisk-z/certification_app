@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BlockType;
+use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,9 +13,10 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class TemplateBlock extends Model
 {
-    use HasFactory, HasUuid, LogsActivity;
+    use BelongsToOrganization, HasFactory, HasUuid, LogsActivity;
 
     protected $fillable = [
+        'organization_id',
         'certificate_template_id',
         'name',
         'slug',

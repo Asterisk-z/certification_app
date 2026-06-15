@@ -16,12 +16,15 @@ class TemplateRequest extends FormRequest
     public function rules(): array
     {
         $templateId = $this->route('template')?->id;
+        // Codes are unique per organization (admin-owned = null org).
+        $orgId = $this->route('template')?->organization_id ?? $this->user()?->organization_id;
 
         return [
             'name' => ['required', 'string', 'max:255'],
             'code' => [
                 'required', 'string', 'max:30', 'alpha_dash:ascii',
-                Rule::unique('certificate_templates', 'code')->ignore($templateId)->withoutTrashed(),
+                Rule::unique('certificate_templates', 'code')->ignore($templateId)
+                    ->where('organization_id', $orgId)->withoutTrashed(),
             ],
             'duration' => ['nullable', 'integer', 'min:1', 'max:1000', 'required_with:duration_type'],
             'duration_type' => ['nullable', Rule::enum(DurationType::class), 'required_with:duration'],

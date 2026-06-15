@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
@@ -12,11 +13,13 @@ use Illuminate\Validation\Rule;
 
 class RecipientController extends Controller
 {
+    use FiltersByOrganization;
+
     public function __construct(private readonly RecipientInviteService $invites) {}
 
     public function index(Request $request): JsonResponse
     {
-        $query = Recipient::query()->withCount('certificates')->with('groups:id,uuid,name')->latest();
+        $query = Recipient::query()->withCount('certificates')->with(['groups:id,uuid,name', 'organization:id,uuid,name'])->latest();
 
         if ($search = trim((string) $request->query('q'))) {
             $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%';
@@ -27,14 +30,19 @@ class RecipientController extends Controller
             $query->whereHas('groups', fn ($q) => $q->where('uuid', $groupUuid));
         }
 
+        $this->applyOrganizationFilter($query, $request);
+
         return response()->json($query->paginate((int) $request->query('per_page', 15)));
     }
 
     public function store(Request $request): JsonResponse
     {
+        $orgId = $request->user()->organization_id;
+
         $data = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('recipients', 'email')->withoutTrashed()],
+            'email' => ['required', 'email', 'max:255',
+                Rule::unique('recipients', 'email')->where('organization_id', $orgId)->withoutTrashed()],
             'phone' => ['nullable', 'string', 'max:30'],
             'group_uuids' => ['nullable', 'array'],
             'group_uuids.*' => ['uuid', 'exists:groups,uuid'],
@@ -64,7 +72,9 @@ class RecipientController extends Controller
     {
         $data = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('recipients', 'email')->ignore($recipient->id)->withoutTrashed()],
+            'email' => ['required', 'email', 'max:255',
+                Rule::unique('recipients', 'email')->ignore($recipient->id)
+                    ->where('organization_id', $recipient->organization_id)->withoutTrashed()],
             'phone' => ['nullable', 'string', 'max:30'],
         ]);
 

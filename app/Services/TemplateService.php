@@ -76,6 +76,7 @@ class TemplateService
     public function addBlock(CertificateTemplate $template, array $data): TemplateBlock
     {
         $data['slug'] = $this->uniqueSlug($template, $data['name']);
+        $data['organization_id'] = $template->organization_id;
 
         return $template->blocks()->create($data);
     }
@@ -129,6 +130,7 @@ class TemplateService
 
         foreach (CertificateTemplate::DEFAULT_BLOCKS as $block) {
             $template->blocks()->create([
+                'organization_id' => $template->organization_id,
                 'name' => $block['name'],
                 'slug' => $block['slug'],
                 'type' => $block['type'],

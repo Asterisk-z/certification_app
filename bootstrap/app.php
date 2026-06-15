@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveOrganization;
+use App\Http\Middleware\EnsureFeature;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => EnsureRole::class,
+            'org.active' => EnsureActiveOrganization::class,
+            'feature' => EnsureFeature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

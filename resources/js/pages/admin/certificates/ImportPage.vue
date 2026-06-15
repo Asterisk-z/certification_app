@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import http, { ensureCsrf } from '@/api/http';
+import { apiBase } from '@/api/area';
 import { useGroupsStore } from '@/stores/recipients';
 import { useUiStore } from '@/stores/ui';
 
@@ -44,11 +45,11 @@ onMounted(async () => {
 function downloadFormat() {
     if (isExisting.value) {
         const query = templateUuid.value ? `?template_uuid=${templateUuid.value}` : '';
-        window.open(`/api/admin/certificates/import-existing-format${query}`, '_blank');
+        window.open(`/api${apiBase()}/certificates/import-existing-format${query}`, '_blank');
         return;
     }
     if (!templateUuid.value) return;
-    window.open(`/api/admin/templates/${templateUuid.value}/import-format`, '_blank');
+    window.open(`/api${apiBase()}/templates/${templateUuid.value}/import-format`, '_blank');
 }
 
 async function submit() {

@@ -51,6 +51,9 @@ class CertificateIssueService
         ?string $manualNumber = null,
     ): Certificate {
         return $template->certificates()->create([
+            // Set explicitly: issuance can run on a queue where there is no auth
+            // user for the model's creating hook to read.
+            'organization_id' => $template->organization_id,
             'recipient_id' => $recipient->id,
             'group_id' => $group?->id,
             'certificate_number' => $manualNumber ?: $this->numbers->next($template),
@@ -88,6 +91,7 @@ class CertificateIssueService
         $template = $certificate->template;
 
         $new = $template->certificates()->create([
+            'organization_id' => $template->organization_id,
             'recipient_id' => $certificate->recipient_id,
             'group_id' => $certificate->group_id,
             'certificate_number' => $this->numbers->next($template),

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
 
 const http = axios.create({
     baseURL: '/api',
@@ -7,6 +8,17 @@ const http = axios.create({
     headers: {
         Accept: 'application/json',
     },
+});
+
+// Organizations reuse the admin SPA's screens, which call /admin/* endpoints.
+// Transparently route those to the org-scoped /org/* endpoints for org users
+// (an org never legitimately calls /admin). Stores also set the base via
+// apiBase(); this is the safety net for any direct page-level call.
+http.interceptors.request.use((config) => {
+    if (config.url && useAuthStore().isOrganization) {
+        config.url = config.url.replace(/^\/?admin\//, '/org/');
+    }
+    return config;
 });
 
 let csrfReady = false;

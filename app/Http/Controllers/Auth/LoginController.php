@@ -27,13 +27,24 @@ class LoginController extends Controller
             ]);
         }
 
+        // An organization account can only sign in while its organization is
+        // present and active — never establish a session otherwise.
+        $user = $request->user();
+        if ($user->isOrganization() && ! $user->organization?->isActive()) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => ['This organization account is inactive.'],
+            ]);
+        }
+
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
 
-        activity()->causedBy($request->user())->log('logged_in');
+        activity()->causedBy($user)->log('logged_in');
 
-        return response()->json(['user' => $request->user()->load('recipient')]);
+        return response()->json(['user' => $user->load('recipient', 'organization')]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -52,6 +63,6 @@ class LoginController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json(['user' => $request->user()->load('recipient')]);
+        return response()->json(['user' => $request->user()->load('recipient', 'organization')]);
     }
 }

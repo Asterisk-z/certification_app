@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia';
 import http, { ensureCsrf } from '@/api/http';
+import { apiBase } from '@/api/area';
 
 export const useCertificatesStore = defineStore('certificates', {
     state: () => ({
         items: [],
         meta: null,
         loading: false,
-        filters: { q: '', status: 'all', template: '', page: 1 },
+        filters: { q: '', status: 'all', template: '', organization: '', page: 1 },
         selected: [],
     }),
 
@@ -18,7 +19,7 @@ export const useCertificatesStore = defineStore('certificates', {
         async fetch() {
             this.loading = true;
             try {
-                const { data } = await http.get('/admin/certificates', { params: this.filters });
+                const { data } = await http.get(`${apiBase()}/certificates`, { params: this.filters });
                 this.items = data.data;
                 this.meta = { current_page: data.current_page, last_page: data.last_page, total: data.total };
                 this.selected = [];
@@ -28,7 +29,7 @@ export const useCertificatesStore = defineStore('certificates', {
         },
 
         async fetchOne(uuid) {
-            const { data } = await http.get(`/admin/certificates/${uuid}`);
+            const { data } = await http.get(`${apiBase()}/certificates/${uuid}`);
             return data;
         },
 
@@ -38,13 +39,13 @@ export const useCertificatesStore = defineStore('certificates', {
 
         async action(uuid, action, payload = {}) {
             await ensureCsrf();
-            const { data } = await http.post(`/admin/certificates/${uuid}/${action}`, payload);
+            const { data } = await http.post(`${apiBase()}/certificates/${uuid}/${action}`, payload);
             return data;
         },
 
         async bulk(action) {
             await ensureCsrf();
-            const { data } = await http.post('/admin/certificates/bulk', {
+            const { data } = await http.post(`${apiBase()}/certificates/bulk`, {
                 action,
                 uuids: this.selected,
             });
@@ -53,19 +54,19 @@ export const useCertificatesStore = defineStore('certificates', {
 
         async destroy(uuid) {
             await ensureCsrf();
-            await http.delete(`/admin/certificates/${uuid}`);
+            await http.delete(`${apiBase()}/certificates/${uuid}`);
         },
 
         async sendTemplate(templateUuid, payload) {
             await ensureCsrf();
-            const { data } = await http.post(`/admin/templates/${templateUuid}/send`, payload);
+            const { data } = await http.post(`${apiBase()}/templates/${templateUuid}/send`, payload);
             return data;
         },
 
         async createManual(payload) {
             await ensureCsrf();
             const isForm = payload instanceof FormData;
-            const { data } = await http.post('/admin/certificates/manual', payload, {
+            const { data } = await http.post(`${apiBase()}/certificates/manual`, payload, {
                 headers: isForm ? { 'Content-Type': 'multipart/form-data' } : {},
             });
             return data;
@@ -75,14 +76,14 @@ export const useCertificatesStore = defineStore('certificates', {
             await ensureCsrf();
             const fd = new FormData();
             fd.append('file', file);
-            const { data } = await http.post(`/admin/certificates/${uuid}/upload`, fd, {
+            const { data } = await http.post(`${apiBase()}/certificates/${uuid}/upload`, fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return data;
         },
 
         download(uuid, format = 'pdf') {
-            window.open(`/api/admin/certificates/${uuid}/download?format=${format}`, '_blank');
+            window.open(`/api${apiBase()}/certificates/${uuid}/download?format=${format}`, '_blank');
         },
     },
 });

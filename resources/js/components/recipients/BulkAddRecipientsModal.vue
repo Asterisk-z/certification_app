@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import http, { ensureCsrf } from '@/api/http';
+import { apiBase } from '@/api/area';
 import { useUiStore } from '@/stores/ui';
 
 const props = defineProps({
@@ -117,7 +118,7 @@ async function submit() {
                         <p class="text-xs text-slate-400">
                             Columns: <code class="font-mono">full_name</code>, <code class="font-mono">email</code>,
                             <code class="font-mono">phone</code> (optional) —
-                            <a href="/api/admin/recipients/bulk-format" class="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" target="_blank">download the format</a>.
+                            <a :href="`/api${apiBase()}/recipients/bulk-format`" class="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" target="_blank">download the format</a>.
                         </p>
                         <input
                             ref="fileInput"
