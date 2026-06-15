@@ -3,10 +3,14 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import http from '@/api/http';
 import { useCertificatesStore } from '@/stores/certificates';
+import { useRecipientsStore, useGroupsStore } from '@/stores/recipients';
 import { useUiStore } from '@/stores/ui';
+import SearchableSelect from '@/components/ui/SearchableSelect.vue';
 
 const router = useRouter();
 const store = useCertificatesStore();
+const recipientsStore = useRecipientsStore();
+const groupsStore = useGroupsStore();
 const ui = useUiStore();
 
 const templates = ref([]);
@@ -30,7 +34,25 @@ const form = reactive({
     send_now: false,
 });
 
+// Add-recipient modal state.
+const recipientModal = ref(false);
+const recipientSaving = ref(false);
+const recipientErrors = ref({});
+const recipientForm = reactive({ full_name: '', email: '', phone: '' });
+
 const hasTemplate = computed(() => Boolean(form.template_uuid));
+
+const templateOptions = computed(() => [
+    { value: '', label: 'No template — register an uploaded certificate' },
+    ...templates.value.map((t) => ({ value: t.uuid, label: `${t.name} (${t.code})` })),
+]);
+const groupOptions = computed(() => [
+    { value: '', label: 'No group' },
+    ...groups.value.map((g) => ({ value: g.uuid, label: g.name })),
+]);
+const recipientOptions = computed(() =>
+    recipients.value.map((r) => ({ value: r.uuid, label: r.full_name, sub: r.email }))
+);
 
 const customFields = computed(() =>
     (selectedTemplate.value?.blocks || []).filter(
@@ -41,7 +63,7 @@ const customFields = computed(() =>
 onMounted(async () => {
     const [templatesResponse, recipientsResponse, groupsResponse] = await Promise.all([
         http.get('/admin/templates', { params: { per_page: 100 } }),
-        http.get('/admin/recipients', { params: { per_page: 200 } }),
+        http.get('/admin/recipients', { params: { per_page: 500 } }),
         http.get('/admin/groups', { params: { per_page: 200 } }),
     ]);
     templates.value = templatesResponse.data.data;
@@ -49,13 +71,51 @@ onMounted(async () => {
     groups.value = groupsResponse.data.data;
 });
 
-async function onTemplateChange() {
+async function onTemplateSelect(value) {
+    form.template_uuid = value;
     selectedTemplate.value = null;
     form.data = {};
-    if (!form.template_uuid) return;
-    const { data } = await http.get(`/admin/templates/${form.template_uuid}`);
+    if (!value) return;
+    const { data } = await http.get(`/admin/templates/${value}`);
     selectedTemplate.value = data;
     form.data = Object.fromEntries(customFields.value.map((b) => [b.slug, '']));
+}
+
+async function createGroup(name) {
+    try {
+        const group = await groupsStore.create({ name });
+        groups.value = [group, ...groups.value];
+        form.group_uuid = group.uuid;
+        ui.success(`Group “${group.name}” created.`);
+    } catch (e) {
+        ui.error(e.response?.data?.message || 'Could not create the group.');
+    }
+}
+
+function openAddRecipient(term) {
+    recipientErrors.value = {};
+    const isEmail = term.includes('@');
+    Object.assign(recipientForm, { full_name: isEmail ? '' : term, email: isEmail ? term : '', phone: '' });
+    recipientModal.value = true;
+}
+
+async function submitNewRecipient() {
+    recipientSaving.value = true;
+    recipientErrors.value = {};
+    try {
+        const recipient = await recipientsStore.create({ ...recipientForm });
+        recipients.value = [recipient, ...recipients.value];
+        form.recipient_uuid = recipient.uuid;
+        recipientModal.value = false;
+        ui.success(`Recipient ${recipient.full_name} added — a portal invite was emailed.`);
+    } catch (e) {
+        recipientErrors.value = e.response?.data?.errors || {};
+        if (!Object.keys(recipientErrors.value).length) {
+            ui.error(e.response?.data?.message || 'Could not add the recipient.');
+        }
+    } finally {
+        recipientSaving.value = false;
+    }
 }
 
 function onFileChange(event) {
@@ -83,6 +143,10 @@ function buildPayload() {
 }
 
 async function submit() {
+    if (!form.recipient_uuid) {
+        ui.error('Please choose a recipient.');
+        return;
+    }
     saving.value = true;
     errors.value = {};
     try {
@@ -112,49 +176,50 @@ async function submit() {
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Template</label>
-                    <select
-                        v-model="form.template_uuid"
-                        class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
-                        @change="onTemplateChange"
-                    >
-                        <option value="">No template — register an uploaded certificate</option>
-                        <option v-for="t in templates" :key="t.uuid" :value="t.uuid">{{ t.name }} ({{ t.code }})</option>
-                    </select>
+                    <SearchableSelect
+                        class="mt-1"
+                        :model-value="form.template_uuid"
+                        :options="templateOptions"
+                        @update:model-value="onTemplateSelect"
+                    />
                     <p v-if="errors.template_uuid" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.template_uuid[0] }}</p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Recipient</label>
-                    <select
-                        v-model="form.recipient_uuid" required
-                        class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
-                    >
-                        <option value="" disabled>Select…</option>
-                        <option v-for="r in recipients" :key="r.uuid" :value="r.uuid">{{ r.full_name }} — {{ r.email }}</option>
-                    </select>
-                    <p v-if="errors.recipient_uuid" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.recipient_uuid[0] }}</p>
-                </div>
 
-                <div v-if="!hasTemplate" class="sm:col-span-2">
+                <div v-if="!hasTemplate">
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Certificate title</label>
                     <input
                         v-model="form.title" type="text" required placeholder="e.g. Authorized Gas Tester"
                         class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     />
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Names the credential since there is no template.</p>
                     <p v-if="errors.title" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.title[0] }}</p>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Group (optional)</label>
-                    <select
+                    <SearchableSelect
+                        class="mt-1"
                         v-model="form.group_uuid"
-                        class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
-                    >
-                        <option value="">No group</option>
-                        <option v-for="g in groups" :key="g.uuid" :value="g.uuid">{{ g.name }}</option>
-                    </select>
+                        :options="groupOptions"
+                        create-label="Create group"
+                        placeholder="No group"
+                        @create="createGroup"
+                    />
                     <p v-if="errors.group_uuid" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.group_uuid[0] }}</p>
                 </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Recipient</label>
+                    <SearchableSelect
+                        class="mt-1"
+                        v-model="form.recipient_uuid"
+                        :options="recipientOptions"
+                        create-label="Add recipient"
+                        placeholder="Select a recipient…"
+                        @create="openAddRecipient"
+                    />
+                    <p v-if="errors.recipient_uuid" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.recipient_uuid[0] }}</p>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Credential number (optional)</label>
                     <input
@@ -222,5 +287,57 @@ async function submit() {
                 </button>
             </div>
         </form>
+
+        <!-- Add recipient modal -->
+        <teleport to="body">
+            <div v-if="recipientModal" class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+                <div class="fixed inset-0 bg-slate-900/50" @click="recipientModal = false" />
+                <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-xl">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Add recipient</h2>
+                    <form class="mt-4 space-y-4" @submit.prevent="submitNewRecipient">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Full name</label>
+                            <input
+                                v-model="recipientForm.full_name" type="text" required
+                                class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                            />
+                            <p v-if="recipientErrors.full_name" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ recipientErrors.full_name[0] }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                            <input
+                                v-model="recipientForm.email" type="email" required
+                                class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                            />
+                            <p v-if="recipientErrors.email" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ recipientErrors.email[0] }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Phone (optional)</label>
+                            <input
+                                v-model="recipientForm.phone" type="text"
+                                class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                            />
+                            <p v-if="recipientErrors.phone" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ recipientErrors.phone[0] }}</p>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">A portal invite is emailed to every new recipient.</p>
+                        <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                @click="recipientModal = false"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit" :disabled="recipientSaving"
+                                class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                            >
+                                {{ recipientSaving ? 'Adding…' : 'Add recipient' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </teleport>
     </div>
 </template>
