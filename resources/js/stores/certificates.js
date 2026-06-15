@@ -64,7 +64,10 @@ export const useCertificatesStore = defineStore('certificates', {
 
         async createManual(payload) {
             await ensureCsrf();
-            const { data } = await http.post('/admin/certificates/manual', payload);
+            const isForm = payload instanceof FormData;
+            const { data } = await http.post('/admin/certificates/manual', payload, {
+                headers: isForm ? { 'Content-Type': 'multipart/form-data' } : {},
+            });
             return data;
         },
 

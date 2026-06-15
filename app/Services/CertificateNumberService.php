@@ -22,8 +22,18 @@ class CertificateNumberService
      */
     public function next(CertificateTemplate $template): string
     {
+        return $this->nextForCode($template->code);
+    }
+
+    /**
+     * Generate a unique credential number for an arbitrary prefix — used when
+     * there is no template to take the code from (e.g. registering a standalone
+     * uploaded certificate).
+     */
+    public function nextForCode(string $code): string
+    {
         do {
-            $candidate = $this->format($template->code, $this->randomPart());
+            $candidate = $this->format($code, $this->randomPart());
         } while (Certificate::withTrashed()->where('certificate_number', $candidate)->exists());
 
         return $candidate;

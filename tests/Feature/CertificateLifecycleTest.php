@@ -15,6 +15,7 @@ use App\Models\Recipient;
 use App\Models\User;
 use App\Services\CertificateRenderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -313,6 +314,55 @@ class CertificateLifecycleTest extends TestCase
             'completion_date' => '2026-05-01',
             'issue_date' => '2026-06-01',
         ])->assertUnprocessable();
+    }
+
+    public function test_manual_certificate_with_group_attaches_membership(): void
+    {
+        $recipient = Recipient::factory()->create();
+        $group = Group::factory()->create();
+
+        $response = $this->actingAs($this->admin)->postJson('/api/admin/certificates/manual', [
+            'template_uuid' => $this->template->uuid,
+            'recipient_uuid' => $recipient->uuid,
+            'group_uuid' => $group->uuid,
+            'issue_date' => '2026-06-01',
+        ])->assertCreated();
+
+        $certificate = Certificate::firstWhere('uuid', $response->json('uuid'));
+        $this->assertSame($group->id, $certificate->group_id);
+        $this->assertTrue($group->recipients()->where('recipients.id', $recipient->id)->exists());
+    }
+
+    public function test_manual_certificate_without_template_registers_uploaded_file(): void
+    {
+        Storage::fake('local');
+        $recipient = Recipient::factory()->create();
+
+        $response = $this->actingAs($this->admin)->post('/api/admin/certificates/manual', [
+            'recipient_uuid' => $recipient->uuid,
+            'title' => 'Authorized Gas Tester',
+            'issue_date' => '2026-06-01',
+            'file' => UploadedFile::fake()->create('cert.pdf', 200, 'application/pdf'),
+        ])->assertCreated()
+            ->assertJsonPath('title', 'Authorized Gas Tester')
+            ->assertJsonPath('status', 'sent')
+            ->assertJsonPath('template', null);
+
+        $certificate = Certificate::firstWhere('uuid', $response->json('uuid'));
+        $this->assertNull($certificate->certificate_template_id);
+        $this->assertTrue($certificate->is_manual);
+        $this->assertStringStartsWith('CERT-', $certificate->certificate_number);
+        Storage::disk('local')->assertExists($certificate->uploaded_file_path);
+    }
+
+    public function test_manual_certificate_without_template_requires_a_title(): void
+    {
+        $recipient = Recipient::factory()->create();
+
+        $this->actingAs($this->admin)->postJson('/api/admin/certificates/manual', [
+            'recipient_uuid' => $recipient->uuid,
+            'issue_date' => '2026-06-01',
+        ])->assertUnprocessable()->assertJsonValidationErrors('title');
     }
 
     public function test_search_finds_certificates_by_number_recipient_and_template(): void

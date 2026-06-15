@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\CertificateStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Group;
 use App\Models\Recipient;
 use App\Services\CertificateIssueService;
+use App\Services\CertificateNumberService;
 use App\Services\CertificateRenderService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -108,33 +110,76 @@ class CertificateController extends Controller
     /**
      * Manually create a certificate, optionally with a custom number.
      */
-    public function storeManual(Request $request): JsonResponse
+    public function storeManual(Request $request, CertificateNumberService $numbers): JsonResponse
     {
         $validated = $request->validate([
-            'template_uuid' => ['required', 'uuid', 'exists:certificate_templates,uuid'],
+            'template_uuid' => ['nullable', 'uuid', 'exists:certificate_templates,uuid'],
             'recipient_uuid' => ['required', 'uuid', 'exists:recipients,uuid'],
+            'group_uuid' => ['nullable', 'uuid', 'exists:groups,uuid'],
+            // A title names the credential when there is no template to name it.
+            'title' => ['nullable', 'string', 'max:255', 'required_without:template_uuid'],
             'certificate_number' => ['nullable', 'string', 'max:60', Rule::unique('certificates', 'certificate_number')],
-            'completion_date' => ['required', 'date'],
+            'completion_date' => ['nullable', 'date'],
             'issue_date' => ['required', 'date'],
             'data' => ['nullable', 'array'],
+            'file' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
             'send_now' => ['boolean'],
         ]);
 
-        $template = CertificateTemplate::where('uuid', $validated['template_uuid'])->firstOrFail();
+        $template = isset($validated['template_uuid'])
+            ? CertificateTemplate::where('uuid', $validated['template_uuid'])->firstOrFail()
+            : null;
         $recipient = Recipient::where('uuid', $validated['recipient_uuid'])->firstOrFail();
+        $group = isset($validated['group_uuid'])
+            ? Group::where('uuid', $validated['group_uuid'])->firstOrFail()
+            : null;
 
-        $certificate = $this->issuer->createCertificate(
-            $template,
-            $recipient,
-            Carbon::parse($validated['completion_date']),
-            Carbon::parse($validated['issue_date']),
-            $validated['data'] ?? [],
-            null,
-            $validated['certificate_number'] ?? null,
-        );
+        $completionDate = filled($validated['completion_date'] ?? null) ? Carbon::parse($validated['completion_date']) : null;
+        $issueDate = Carbon::parse($validated['issue_date']);
 
-        if ($request->boolean('send_now')) {
-            $this->issuer->queueSend($certificate);
+        if ($template) {
+            $certificate = $this->issuer->createCertificate(
+                $template,
+                $recipient,
+                $completionDate ?? $issueDate,
+                $issueDate,
+                $validated['data'] ?? [],
+                $group,
+                $validated['certificate_number'] ?? null,
+            );
+
+            if ($request->boolean('send_now')) {
+                $this->issuer->queueSend($certificate);
+            }
+        } else {
+            // No template: register the credential as already issued (verifiable
+            // immediately, no email). Typically paired with an uploaded file.
+            $certificate = Certificate::create([
+                'certificate_template_id' => null,
+                'title' => $validated['title'],
+                'recipient_id' => $recipient->id,
+                'group_id' => $group?->id,
+                'certificate_number' => $validated['certificate_number'] ?? $numbers->nextForCode('CERT'),
+                'data' => $validated['data'] ?? [],
+                'completion_date' => $completionDate,
+                'issue_date' => $issueDate,
+                'expiry_date' => null,
+                'status' => CertificateStatus::Sent,
+                'is_manual' => true,
+            ]);
+        }
+
+        if ($group) {
+            $group->recipients()->syncWithoutDetaching([$recipient->id]);
+        }
+
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->storeAs(
+                'certificates/uploads',
+                $certificate->uuid.'-manual.pdf',
+                'local'
+            );
+            $certificate->forceFill(['uploaded_file_path' => $path, 'is_manual' => true])->save();
         }
 
         activity()->performedOn($certificate)->causedBy($request->user())->log('certificate_created_manually');
