@@ -12,6 +12,16 @@ const routes = [
         ],
     },
 
+    // Public changelog (full page) — its own route to avoid clashing with the
+    // other layouts mounted at '/'.
+    {
+        path: '/changelog',
+        component: () => import('@/layouts/PublicLayout.vue'),
+        children: [
+            { path: '', name: 'changelog', component: () => import('@/pages/public/ChangelogPage.vue') },
+        ],
+    },
+
     // Auth
     {
         path: '/',

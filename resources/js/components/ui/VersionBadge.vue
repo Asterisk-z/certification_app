@@ -1,6 +1,9 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import http from '@/api/http';
+
+const router = useRouter();
 
 const props = defineProps({
     // 'light' for dark backgrounds (admin sidebar), 'default' otherwise.
@@ -31,6 +34,11 @@ function lines(body) {
 
 function formatDate(value) {
     return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function viewFullPage() {
+    open.value = false;
+    router.push({ name: 'changelog' });
 }
 </script>
 
@@ -81,6 +89,12 @@ function formatDate(value) {
                             </li>
                         </ul>
                     </div>
+                </div>
+
+                <div v-if="notes.length" class="border-t border-slate-100 px-6 py-3 text-center dark:border-slate-800">
+                    <button class="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" @click="viewFullPage">
+                        View full changelog →
+                    </button>
                 </div>
             </div>
         </div>

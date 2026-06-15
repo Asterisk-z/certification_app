@@ -18,13 +18,20 @@ export async function ensureCsrf() {
     }
 }
 
+// Public routes that must never bounce a guest to login on a 401.
+const PUBLIC_PATH = /^\/(login|verify|changelog|invite|forgot-password|reset-password)/;
+
 http.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Session expired — drop local auth state and send to login.
-            const current = window.location.pathname;
-            if (!current.startsWith('/login') && !current.startsWith('/verify') && current !== '/') {
+        const url = error.config?.url || '';
+        // The auth probe (`/auth/me`) 401s for guests by design — that's how
+        // the app learns it's logged out, not a session expiring mid-action.
+        const isAuthProbe = url.includes('auth/me');
+
+        if (error.response?.status === 401 && !isAuthProbe) {
+            const path = window.location.pathname;
+            if (path !== '/' && !PUBLIC_PATH.test(path)) {
                 window.location.assign('/login');
             }
         }
