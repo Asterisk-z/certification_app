@@ -4,11 +4,14 @@ namespace Database\Seeders;
 
 use App\Enums\TemplateStatus;
 use App\Enums\UserRole;
+use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Group;
 use App\Models\Recipient;
 use App\Models\User;
+use App\Services\CertificateIssueService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -39,6 +42,50 @@ class LegacyDataSeeder extends Seeder
 
         $this->seedTemplates();
         $this->seedRecipients();
+        $this->seedCertificates();
+    }
+
+    /**
+     * Issue a credential to every recipient for the template that matches their
+     * group's name. Credentials are created as `pending` only — no PDF is
+     * rendered and no email is sent (a seeder must not mail real people, and
+     * the templates have no artwork yet). Finish the templates in the designer,
+     * then bulk-send from the certificates screen. Idempotent: a recipient who
+     * already has a credential for that template + group is skipped.
+     */
+    private function seedCertificates(): void
+    {
+        $issueService = app(CertificateIssueService::class);
+
+        // We have no original issue dates from the previous environment, so use
+        // today's date as the migration date; expiry follows the template.
+        $issueDate = Carbon::today();
+
+        $templatesByName = CertificateTemplate::all()->keyBy('name');
+
+        DB::transaction(function () use ($issueService, $issueDate, $templatesByName) {
+            Group::with('recipients')->get()->each(function (Group $group) use ($issueService, $issueDate, $templatesByName) {
+                $template = $templatesByName->get($group->name);
+
+                if (! $template) {
+                    return; // A group with no same-named template (e.g. stray data).
+                }
+
+                foreach ($group->recipients as $recipient) {
+                    $alreadyIssued = Certificate::withTrashed()
+                        ->where('certificate_template_id', $template->id)
+                        ->where('recipient_id', $recipient->id)
+                        ->where('group_id', $group->id)
+                        ->exists();
+
+                    if ($alreadyIssued) {
+                        continue;
+                    }
+
+                    $issueService->createCertificate($template, $recipient, $issueDate, $issueDate, [], $group);
+                }
+            });
+        });
     }
 
     /**
