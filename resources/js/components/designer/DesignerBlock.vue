@@ -128,14 +128,14 @@ function nudge(event) {
                 </svg>
             </div>
         </template>
-        <template v-else-if="block.type === 'image'">
+        <template v-else-if="block.type === 'image' || block.type === 'signature'">
             <img
                 v-if="block.value && !block.is_dynamic"
                 :src="`/storage/${block.value}`"
                 class="pointer-events-none h-full w-full object-contain"
                 alt=""
             />
-            <div v-else class="flex h-full w-full items-center justify-center bg-slate-200/60 text-xs text-slate-500">Image</div>
+            <div v-else class="flex h-full w-full items-center justify-center bg-slate-200/60 text-xs capitalize text-slate-500">{{ block.type }}</div>
         </template>
         <span v-else class="w-full leading-tight" :style="{ textAlign: block.text_align }" v-text="displayText" />
 

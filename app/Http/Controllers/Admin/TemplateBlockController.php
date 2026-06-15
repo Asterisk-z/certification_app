@@ -40,7 +40,7 @@ class TemplateBlockController extends Controller
         $data = $request->safe()->except('image');
 
         if ($request->hasFile('image')) {
-            if ($block->type->value === 'image' && $block->value && ! $block->is_dynamic) {
+            if ($block->type->isImageLike() && $block->value && ! $block->is_dynamic) {
                 Storage::disk('public')->delete($block->value);
             }
             $data['value'] = $request->file('image')->store('blocks', 'public');

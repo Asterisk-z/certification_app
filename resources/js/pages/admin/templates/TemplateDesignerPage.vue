@@ -5,6 +5,7 @@ import { useTemplatesStore } from '@/stores/templates';
 import { useUiStore } from '@/stores/ui';
 import DesignerBlock from '@/components/designer/DesignerBlock.vue';
 import BlockPropertiesPanel from '@/components/designer/BlockPropertiesPanel.vue';
+import SignaturePad from '@/components/designer/SignaturePad.vue';
 
 const route = useRoute();
 const store = useTemplatesStore();
@@ -24,6 +25,13 @@ const displayWidth = ref(800);
 const addModal = ref(false);
 const addForm = reactive({ name: '', type: 'text', value: '', is_dynamic: false, image: null });
 const addLoading = ref(false);
+const addSignaturePad = ref(null);
+
+// Re-draw an existing signature block.
+const signModal = ref(false);
+const signTargetUuid = ref(null);
+const signLoading = ref(false);
+const editSignaturePad = ref(null);
 
 const selected = computed(() => blocks.value.find((b) => b.uuid === selectedUuid.value) || null);
 const scale = computed(() => (template.value ? displayWidth.value / template.value.bg_width : 1));
@@ -135,11 +143,15 @@ async function addBlock() {
     addLoading.value = true;
     try {
         let payload;
-        if (addForm.type === 'image' && addForm.image) {
-            payload = new FormData();
-            payload.append('name', addForm.name);
-            payload.append('type', 'image');
-            payload.append('image', addForm.image);
+        if (addForm.type === 'signature') {
+            const blob = await addSignaturePad.value?.toBlob();
+            if (!blob) {
+                ui.error('Please draw the signature before adding the block.');
+                return;
+            }
+            payload = imageFormData('signature', new File([blob], 'signature.png', { type: 'image/png' }));
+        } else if (addForm.type === 'image' && addForm.image) {
+            payload = imageFormData('image', addForm.image);
         } else {
             payload = {
                 name: addForm.name,
@@ -163,6 +175,51 @@ async function addBlock() {
         ui.error(e.response?.data?.message || 'Could not add the block.');
     } finally {
         addLoading.value = false;
+    }
+}
+
+// Image/signature blocks are uploaded as multipart with a starting position
+// and size so they land on the canvas ready to drag.
+function imageFormData(type, file) {
+    const fd = new FormData();
+    fd.append('name', addForm.name);
+    fd.append('type', type);
+    fd.append('image', file);
+    fd.append('pos_x', 40);
+    fd.append('pos_y', 40);
+    fd.append('width', DEFAULT_BLOCK_WIDTH);
+    fd.append('height', Math.round(DEFAULT_BLOCK_WIDTH / 3));
+    return fd;
+}
+
+function openSignModal() {
+    if (!selected.value) return;
+    signTargetUuid.value = selected.value.uuid;
+    signModal.value = true;
+}
+
+async function saveSignature() {
+    const target = blocks.value.find((b) => b.uuid === signTargetUuid.value);
+    if (!target) return;
+    signLoading.value = true;
+    try {
+        const blob = await editSignaturePad.value?.toBlob();
+        if (!blob) {
+            ui.error('Please draw the signature first.');
+            return;
+        }
+        const fd = new FormData();
+        fd.append('name', target.name);
+        fd.append('type', 'signature');
+        fd.append('image', new File([blob], 'signature.png', { type: 'image/png' }));
+        const updated = await store.updateBlock(target.uuid, fd);
+        target.value = updated.value;
+        signModal.value = false;
+        ui.success('Signature saved.');
+    } catch (e) {
+        ui.error(e.response?.data?.message || 'Could not save the signature.');
+    } finally {
+        signLoading.value = false;
     }
 }
 </script>
@@ -230,6 +287,7 @@ async function addBlock() {
                     @change="selected && patchBlock(selected.uuid, $event)"
                     @save-block="saveSelectedBlock"
                     @remove="removeSelectedBlock"
+                    @draw-signature="openSignModal"
                 />
             </aside>
         </div>
@@ -322,6 +380,7 @@ async function addBlock() {
                             >
                                 <option value="text">Text</option>
                                 <option value="image">Image</option>
+                                <option value="signature">Signature (draw on platform)</option>
                                 <option value="qrcode">QR code</option>
                             </select>
                         </div>
@@ -347,6 +406,10 @@ async function addBlock() {
                                 @change="addForm.image = $event.target.files[0]"
                             />
                         </div>
+                        <div v-if="addForm.type === 'signature'">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Signature</label>
+                            <SignaturePad ref="addSignaturePad" class="mt-1" />
+                        </div>
                         <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                             <button
                                 type="button"
@@ -363,6 +426,35 @@ async function addBlock() {
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </teleport>
+
+        <!-- Draw / re-draw signature modal -->
+        <teleport to="body">
+            <div v-if="signModal" class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+                <div class="fixed inset-0 bg-slate-900/50" @click="signModal = false" />
+                <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-xl">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Draw signature</h2>
+                    <div class="mt-4">
+                        <SignaturePad ref="editSignaturePad" />
+                    </div>
+                    <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                            @click="signModal = false"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button" :disabled="signLoading"
+                            class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                            @click="saveSignature"
+                        >
+                            {{ signLoading ? 'Saving…' : 'Save signature' }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </teleport>

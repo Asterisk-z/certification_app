@@ -32,7 +32,7 @@
             <div class="block" style="{{ $style }}">
                 <img src="data:image/svg+xml;base64,{{ $qrSvg }}" alt="QR code">
             </div>
-        @elseif ($block->type->value === 'image')
+        @elseif ($block->type->isImageLike())
             @php
                 $imageData = null;
                 if ($block->value && \Illuminate\Support\Facades\Storage::disk('public')->exists($block->value)) {

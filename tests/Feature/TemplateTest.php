@@ -128,4 +128,48 @@ class TemplateTest extends TestCase
             ->deleteJson("/api/admin/blocks/{$block->uuid}")
             ->assertUnprocessable();
     }
+
+    public function test_admin_can_add_a_signature_block_drawn_on_the_platform(): void
+    {
+        $template = CertificateTemplate::factory()->create(['user_id' => $this->admin->id]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/admin/templates/{$template->uuid}/blocks", [
+            'name' => 'Director Signature',
+            'type' => 'signature',
+            'image' => UploadedFile::fake()->image('signature.png', 600, 200),
+            'pos_x' => 40,
+            'pos_y' => 40,
+            'width' => 300,
+            'height' => 100,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('type', 'signature')
+            ->assertJsonPath('is_dynamic', false);
+
+        $block = $template->blocks()->where('slug', 'director_signature')->first();
+        $this->assertNotNull($block->value);
+        Storage::disk('public')->assertExists($block->value);
+    }
+
+    public function test_redrawing_a_signature_replaces_the_stored_image(): void
+    {
+        $template = CertificateTemplate::factory()->create(['user_id' => $this->admin->id]);
+        $original = UploadedFile::fake()->image('sig.png')->store('blocks', 'public');
+        $block = $template->blocks()->create([
+            'name' => 'Signature', 'slug' => 'signature', 'type' => 'signature', 'value' => $original,
+        ]);
+
+        $this->actingAs($this->admin)->postJson("/api/admin/blocks/{$block->uuid}", [
+            '_method' => 'PUT',
+            'name' => 'Signature',
+            'type' => 'signature',
+            'image' => UploadedFile::fake()->image('new-sig.png', 600, 200),
+        ])->assertOk();
+
+        $block->refresh();
+        $this->assertNotEquals($original, $block->value);
+        Storage::disk('public')->assertMissing($original);
+        Storage::disk('public')->assertExists($block->value);
+    }
 }

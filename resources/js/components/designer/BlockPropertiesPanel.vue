@@ -3,7 +3,7 @@ const props = defineProps({
     block: { type: Object, default: null },
 });
 
-const emit = defineEmits(['change', 'remove', 'save-block']);
+const emit = defineEmits(['change', 'remove', 'save-block', 'draw-signature']);
 
 const fonts = ['Arial', 'Inter', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Tahoma', 'Trebuchet MS'];
 const weights = ['normal', 'bold', '300', '400', '500', '600', '700', '800'];
@@ -37,6 +37,20 @@ function set(field, value) {
                 class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500"
                 @input="set('value', $event.target.value)"
             />
+        </div>
+
+        <div v-if="block.type === 'signature'">
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Signature</label>
+            <div class="mt-1 flex h-20 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                <img v-if="block.value" :src="`/storage/${block.value}`" class="max-h-full max-w-full object-contain" alt="Signature" />
+                <span v-else class="text-xs text-slate-400">Not signed yet</span>
+            </div>
+            <button
+                class="mt-2 w-full rounded-lg border border-brand-200 dark:border-brand-900 px-3 py-2 text-sm font-medium text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/30"
+                @click="$emit('draw-signature')"
+            >
+                {{ block.value ? 'Re-draw signature' : 'Draw signature' }}
+            </button>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -74,7 +88,7 @@ function set(field, value) {
             </div>
         </div>
 
-        <template v-if="block.type !== 'image'">
+        <template v-if="block.type === 'text' || block.type === 'qrcode'">
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Font size</label>
