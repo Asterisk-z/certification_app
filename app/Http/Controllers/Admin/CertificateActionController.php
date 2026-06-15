@@ -65,12 +65,13 @@ class CertificateActionController extends Controller
     {
         $certificate = Certificate::where('uuid', $uuid)->firstOrFail();
 
-        if (! in_array($certificate->status, [CertificateStatus::Sent, CertificateStatus::Failed, CertificateStatus::Pending], true)) {
+        if (! in_array($certificate->status, [CertificateStatus::Sent, CertificateStatus::Failed, CertificateStatus::Pending, CertificateStatus::Queued], true)) {
             return response()->json(['message' => "A {$certificate->status->value} credential cannot be resent."], 422);
         }
 
-        // Failed/pending go through the queue transition; sent certificates
-        // are re-queued directly.
+        // Re-queue and (re)dispatch the send job. Queued credentials are
+        // already in this state — re-dispatching retries a job that never
+        // ran (e.g. the worker was down when it was first queued).
         $certificate->status = CertificateStatus::Queued;
         $certificate->save();
         SendCertificateJob::dispatch($certificate->id);
@@ -193,7 +194,7 @@ class CertificateActionController extends Controller
 
     private function bulkResend(Certificate $certificate): bool
     {
-        if (! in_array($certificate->status, [CertificateStatus::Sent, CertificateStatus::Failed, CertificateStatus::Pending], true)) {
+        if (! in_array($certificate->status, [CertificateStatus::Sent, CertificateStatus::Failed, CertificateStatus::Pending, CertificateStatus::Queued], true)) {
             return false;
         }
 

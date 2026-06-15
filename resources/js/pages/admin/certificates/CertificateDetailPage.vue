@@ -110,11 +110,11 @@ async function upload(event) {
                     Download PNG
                 </button>
                 <button
-                    v-if="['sent', 'failed', 'pending'].includes(certificate.status)"
+                    v-if="['sent', 'failed', 'pending', 'queued'].includes(certificate.status)"
                     class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     @click="run('resend', 'Credential queued for sending.')"
                 >
-                    {{ certificate.status === 'sent' ? 'Resend' : 'Send' }}
+                    {{ certificate.status === 'sent' ? 'Resend' : certificate.status === 'queued' ? 'Retry' : 'Send' }}
                 </button>
                 <button
                     v-if="['sent', 'expired'].includes(certificate.status) && certificate.template"

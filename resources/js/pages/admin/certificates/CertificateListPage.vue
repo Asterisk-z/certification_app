@@ -99,7 +99,10 @@ function actionsFor(certificate) {
     ];
     const status = certificate.status;
 
-    if (['sent', 'failed', 'pending'].includes(status)) actions.push({ key: 'resend', label: status === 'sent' ? 'Resend' : 'Send' });
+    if (['sent', 'failed', 'pending', 'queued'].includes(status)) {
+        const label = status === 'sent' ? 'Resend' : status === 'queued' ? 'Retry' : 'Send';
+        actions.push({ key: 'resend', label });
+    }
     if (['sent', 'expired'].includes(status) && certificate.template) actions.push({ key: 'renew', label: 'Renew' });
     if (['pending', 'queued', 'sent'].includes(status)) actions.push({ key: 'revoke', label: 'Revoke', danger: true });
     if (status === 'revoked') actions.push({ key: 'unrevoke', label: 'Restore (un-revoke)' });

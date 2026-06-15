@@ -132,6 +132,22 @@ class CertificateLifecycleTest extends TestCase
         Queue::assertPushed(SendCertificateJob::class, 1);
     }
 
+    public function test_retry_queued_certificate_redispatches_job(): void
+    {
+        Queue::fake();
+        $certificate = Certificate::factory()->create([
+            'certificate_template_id' => $this->template->id,
+            'status' => CertificateStatus::Queued,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/admin/certificates/{$certificate->uuid}/resend")
+            ->assertOk()
+            ->assertJsonPath('status', 'queued');
+
+        Queue::assertPushed(SendCertificateJob::class, 1);
+    }
+
     public function test_revoke_and_unrevoke(): void
     {
         Mail::fake();
