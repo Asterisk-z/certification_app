@@ -51,9 +51,34 @@ function openEdit(note) {
     modal.value = true;
 }
 
+// Numeric dotted compare so 1.10.0 > 1.2.0 (server is authoritative).
+function compareVersions(a, b) {
+    const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+    const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] || 0) - (pb[i] || 0);
+        if (d !== 0) return d > 0 ? 1 : -1;
+    }
+    return 0;
+}
+
 async function save() {
-    saving.value = true;
     errors.value = {};
+
+    // New versions must outrank the highest existing one and not be backdated.
+    if (!editing.value && notes.value.length) {
+        const highest = notes.value.reduce((max, n) => (compareVersions(n.version, max.version) > 0 ? n : max), notes.value[0]);
+        if (compareVersions(form.version, highest.version) <= 0) {
+            errors.value = { version: [`Must be higher than the latest version (v${highest.version}).`] };
+            return;
+        }
+        if (form.released_on < highest.released_on.slice(0, 10)) {
+            errors.value = { released_on: [`Cannot be earlier than v${highest.version} (${highest.released_on.slice(0, 10)}).`] };
+            return;
+        }
+    }
+
+    saving.value = true;
     try {
         await ensureCsrf();
         if (editing.value) {
@@ -151,6 +176,7 @@ function lines(body) {
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Release date</label>
                                 <input v-model="form.released_on" type="date" required class="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700" />
+                                <p v-if="errors.released_on" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors.released_on[0] }}</p>
                             </div>
                         </div>
                         <div>

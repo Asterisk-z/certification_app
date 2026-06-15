@@ -58,6 +58,57 @@ class ReleaseNoteTest extends TestCase
         $this->getJson('/api/changelog')->assertOk()->assertJsonPath('current_version', null);
     }
 
+    public function test_new_version_must_be_higher_than_the_latest(): void
+    {
+        ReleaseNote::factory()->create(['version' => '2.0.0', 'released_on' => '2026-06-01']);
+
+        // Equal version is rejected.
+        $this->actingAs($this->admin)->postJson('/api/admin/release-notes', [
+            'version' => '2.0.0', 'body' => 'x', 'released_on' => '2026-06-02',
+        ])->assertUnprocessable()->assertJsonValidationErrors('version');
+
+        // Lower version is rejected.
+        $this->actingAs($this->admin)->postJson('/api/admin/release-notes', [
+            'version' => '1.5.0', 'body' => 'x', 'released_on' => '2026-06-02',
+        ])->assertUnprocessable()->assertJsonValidationErrors('version');
+
+        // Higher version is accepted — and 2.10.0 beats 2.2.0 (not string sort).
+        $this->actingAs($this->admin)->postJson('/api/admin/release-notes', [
+            'version' => '2.10.0', 'body' => 'x', 'released_on' => '2026-06-05',
+        ])->assertCreated();
+    }
+
+    public function test_new_version_date_cannot_be_before_the_latest(): void
+    {
+        ReleaseNote::factory()->create(['version' => '2.0.0', 'released_on' => '2026-06-10']);
+
+        $this->actingAs($this->admin)->postJson('/api/admin/release-notes', [
+            'version' => '2.1.0', 'body' => 'x', 'released_on' => '2026-06-05',
+        ])->assertUnprocessable()->assertJsonValidationErrors('released_on');
+
+        // Same date is allowed.
+        $this->actingAs($this->admin)->postJson('/api/admin/release-notes', [
+            'version' => '2.1.0', 'body' => 'x', 'released_on' => '2026-06-10',
+        ])->assertCreated();
+    }
+
+    public function test_first_version_has_no_ordering_constraint(): void
+    {
+        $this->actingAs($this->admin)->postJson('/api/admin/release-notes', [
+            'version' => '0.1.0', 'body' => 'x', 'released_on' => '2020-01-01',
+        ])->assertCreated();
+    }
+
+    public function test_editing_a_version_ignores_itself(): void
+    {
+        $note = ReleaseNote::factory()->create(['version' => '2.0.0', 'released_on' => '2026-06-10']);
+
+        // Fixing the body without changing version/date must succeed.
+        $this->actingAs($this->admin)->putJson("/api/admin/release-notes/{$note->uuid}", [
+            'version' => '2.0.0', 'body' => 'Fixed typo', 'released_on' => '2026-06-10',
+        ])->assertOk();
+    }
+
     public function test_admin_can_update_and_delete_a_version(): void
     {
         $note = ReleaseNote::factory()->create(['version' => '1.0.0']);
