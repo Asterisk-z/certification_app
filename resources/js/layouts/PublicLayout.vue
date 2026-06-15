@@ -1,6 +1,7 @@
 <script setup>
 import { useAuthStore } from '@/stores/auth';
 import ThemeToggle from '@/components/ui/ThemeToggle.vue';
+import VersionBadge from '@/components/ui/VersionBadge.vue';
 
 const auth = useAuthStore();
 </script>
@@ -33,8 +34,9 @@ const auth = useAuthStore();
         </main>
 
         <footer
-            class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-            © {{ new Date().getFullYear() }} HSE Board. All rights reserved.
+            class="flex flex-col items-center justify-center gap-1 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+            <span>© {{ new Date().getFullYear() }} HSE Board. All rights reserved.</span>
+            <VersionBadge />
         </footer>
     </div>
 </template>

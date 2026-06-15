@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import NotificationsBell from '@/components/ui/NotificationsBell.vue';
 import ThemeToggle from '@/components/ui/ThemeToggle.vue';
+import VersionBadge from '@/components/ui/VersionBadge.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -45,5 +46,9 @@ async function logout() {
         <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
             <router-view />
         </main>
+
+        <footer class="flex items-center justify-center border-t border-slate-200 py-4 dark:border-slate-800">
+            <VersionBadge />
+        </footer>
     </div>
 </template>

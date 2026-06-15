@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import NotificationsBell from '@/components/ui/NotificationsBell.vue';
 import ThemeToggle from '@/components/ui/ThemeToggle.vue';
+import VersionBadge from '@/components/ui/VersionBadge.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -18,6 +19,7 @@ const nav = [
     { label: 'Newsletters', to: { name: 'admin.newsletters' }, icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
     { label: 'Mail Logs', to: { name: 'admin.logs.mail' }, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
     { label: 'Activity Logs', to: { name: 'admin.logs.activity' }, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { label: 'Version Control', to: { name: 'admin.changelog' }, icon: 'M12 8v4l3 3m-3-9a9 9 0 100 18 9 9 0 000-18zm7 4l2-2m-2 2l-2-2' },
 ];
 
 async function logout() {
@@ -50,7 +52,10 @@ async function logout() {
                 </router-link>
             </nav>
             <div class="border-t border-slate-800 p-4">
-                <p class="truncate text-sm font-medium text-white">{{ auth.user?.name }}</p>
+                <div class="flex items-center justify-between gap-2">
+                    <p class="truncate text-sm font-medium text-white">{{ auth.user?.name }}</p>
+                    <VersionBadge variant="light" />
+                </div>
                 <p class="truncate text-xs text-slate-400">{{ auth.user?.email }}</p>
                 <button
                     class="mt-3 w-full rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700"

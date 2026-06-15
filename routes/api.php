@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\RecipientBulkController;
 use App\Http\Controllers\Admin\RecipientController;
 use App\Http\Controllers\Admin\RecipientImportController;
 use App\Http\Controllers\Admin\RecipientInviteController;
+use App\Http\Controllers\Admin\ReleaseNoteController;
 use App\Http\Controllers\Admin\TemplateBlockController;
 use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\TemplateDesignerController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Auth\InviteController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Public\ChangelogController;
 use App\Http\Controllers\Public\VerificationController;
 use App\Http\Controllers\Recipient\PortalController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +29,9 @@ use Illuminate\Support\Facades\Route;
 // Public verification (landing page feature)
 // ---------------------------------------------------------------------------
 Route::get('verify', [VerificationController::class, 'lookup'])->middleware('throttle:20,1');
+
+// Public changelog / current version (shown via the version badge everywhere).
+Route::get('changelog', ChangelogController::class);
 
 // ---------------------------------------------------------------------------
 // Public auth
@@ -105,6 +110,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(functi
     Route::get('logs/mail', [LogController::class, 'mail']);
     Route::get('logs/activity', [LogController::class, 'activity']);
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+
+    Route::get('release-notes', [ReleaseNoteController::class, 'index']);
+    Route::post('release-notes', [ReleaseNoteController::class, 'store']);
+    Route::put('release-notes/{releaseNote:uuid}', [ReleaseNoteController::class, 'update']);
+    Route::delete('release-notes/{releaseNote:uuid}', [ReleaseNoteController::class, 'destroy']);
 });
 
 // ---------------------------------------------------------------------------

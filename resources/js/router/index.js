@@ -48,6 +48,7 @@ const routes = [
             { path: 'newsletters/compose', name: 'admin.newsletters.compose', component: () => import('@/pages/admin/newsletters/NewsletterComposePage.vue') },
             { path: 'logs/mail', name: 'admin.logs.mail', component: () => import('@/pages/admin/logs/MailLogPage.vue') },
             { path: 'logs/activity', name: 'admin.logs.activity', component: () => import('@/pages/admin/logs/ActivityLogPage.vue') },
+            { path: 'changelog', name: 'admin.changelog', component: () => import('@/pages/admin/ChangelogPage.vue') },
         ],
     },
 
