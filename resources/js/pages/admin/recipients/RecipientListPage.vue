@@ -59,7 +59,7 @@ async function save() {
             ui.success('Recipient updated.');
         } else {
             await store.create(form);
-            ui.success('Recipient added.');
+            ui.success('Recipient added and invite sent.');
         }
         modal.value = false;
         store.fetch();

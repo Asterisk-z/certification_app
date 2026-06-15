@@ -153,7 +153,7 @@ async function submit() {
 
                     <div v-if="result" class="space-y-2">
                         <div class="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-                            {{ result.created }} added, {{ result.updated }} updated.
+                            {{ result.created }} added &amp; invited, {{ result.updated }} updated.
                         </div>
                         <div v-if="result.failures?.length" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
                             <p class="font-semibold">{{ result.failures.length }} row(s) skipped:</p>

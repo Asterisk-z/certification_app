@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Services\RecipientInviteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class RecipientController extends Controller
 {
+    public function __construct(private readonly RecipientInviteService $invites) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = Recipient::query()->withCount('certificates')->with('groups:id,uuid,name')->latest();
@@ -43,6 +46,9 @@ class RecipientController extends Controller
             $groupIds = Group::whereIn('uuid', $data['group_uuids'])->pluck('id');
             $recipient->groups()->sync($groupIds);
         }
+
+        // Every new recipient is emailed a portal invite.
+        $this->invites->send($recipient, $request->user());
 
         return response()->json($recipient->load('groups:id,uuid,name'), 201);
     }

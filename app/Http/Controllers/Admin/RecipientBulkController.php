@@ -23,7 +23,7 @@ class RecipientBulkController extends Controller
      * uploaded Excel/CSV (columns: full_name, email, phone), optionally
      * attaching everyone to one or more groups.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, RecipientInviteService $invites): JsonResponse
     {
         $validated = $request->validate([
             'text' => ['nullable', 'string', 'max:100000', 'required_without:file'],
@@ -80,7 +80,13 @@ class RecipientBulkController extends Controller
                 $recipient->groups()->syncWithoutDetaching($groupIds);
             }
 
-            $isNew ? $created++ : $updated++;
+            // Newly added recipients are emailed a portal invite.
+            if ($isNew) {
+                $invites->send($recipient, $request->user());
+                $created++;
+            } else {
+                $updated++;
+            }
         }
 
         activity()->causedBy($request->user())
@@ -88,7 +94,7 @@ class RecipientBulkController extends Controller
             ->log('recipients_bulk_added');
 
         return response()->json([
-            'message' => trim("{$created} recipient(s) added, {$updated} updated.".(count($failures) ? ' '.count($failures).' row(s) skipped.' : '')),
+            'message' => trim("{$created} recipient(s) added & invited, {$updated} updated.".(count($failures) ? ' '.count($failures).' row(s) skipped.' : '')),
             'created' => $created,
             'updated' => $updated,
             'failures' => $failures,
