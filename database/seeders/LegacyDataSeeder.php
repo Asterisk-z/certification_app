@@ -5,7 +5,11 @@ namespace Database\Seeders;
 use App\Models\Group;
 use Illuminate\Database\Seeder;
 
-class GroupSeeder extends Seeder
+/**
+ * Migrates reference data carried over from the previous environment so the
+ * new platform starts with the same records. Idempotent — safe to re-run.
+ */
+class LegacyDataSeeder extends Seeder
 {
     public function run(): void
     {
