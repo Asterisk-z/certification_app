@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Mail\OrganizationWelcomeMail;
 use App\Models\CertificateTemplate;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -35,6 +37,8 @@ class OrganizationManagementTest extends TestCase
 
     public function test_admin_creates_org_with_initial_password(): void
     {
+        Mail::fake();
+
         $response = $this->actingAs($this->admin)->postJson('/api/admin/organizations', [
             'name' => 'Acme Safety',
             'email' => 'ops@acme.test',
@@ -49,11 +53,22 @@ class OrganizationManagementTest extends TestCase
         $this->assertSame('ops@acme.test', $user->email);
         // Password is set, so the org can log in immediately.
         $this->assertTrue(Hash::check('secret-password', $user->password));
+
+        // A welcome mail goes out even when no setup link is involved.
+        Mail::assertQueued(
+            OrganizationWelcomeMail::class,
+            fn (OrganizationWelcomeMail $mail) => $mail->hasTo('ops@acme.test') && ! $mail->setupLinkSent,
+        );
+        $this->assertDatabaseHas('mail_logs', [
+            'recipient_email' => 'ops@acme.test',
+            'mailable_type' => OrganizationWelcomeMail::class,
+        ]);
     }
 
     public function test_admin_creates_org_with_setup_link(): void
     {
         Notification::fake();
+        Mail::fake();
 
         $this->actingAs($this->admin)->postJson('/api/admin/organizations', [
             'name' => 'Beta Corp',
@@ -63,6 +78,12 @@ class OrganizationManagementTest extends TestCase
 
         $user = User::where('email', 'admin@beta.test')->first();
         Notification::assertSentTo($user, ResetPassword::class);
+
+        // The welcome mail is sent here too, flagged that a setup link follows.
+        Mail::assertQueued(
+            OrganizationWelcomeMail::class,
+            fn (OrganizationWelcomeMail $mail) => $mail->hasTo('admin@beta.test') && $mail->setupLinkSent,
+        );
     }
 
     public function test_org_email_must_be_unique_against_orgs_and_users(): void

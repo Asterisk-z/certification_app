@@ -50,21 +50,28 @@ class LegacyDataSeeder extends Seeder
      * group's name. Credentials are created as `pending` only — no PDF is
      * rendered and no email is sent (a seeder must not mail real people, and
      * the templates have no artwork yet). Finish the templates in the designer,
-     * then bulk-send from the certificates screen. Idempotent: a recipient who
-     * already has a credential for that template + group is skipped.
+     * then bulk-send from the certificates screen.
+     *
+     * Each credential keeps its original number, completion date and issue date
+     * from the previous environment (see legacyCertificates()); expiry is
+     * recomputed from that issue date and the template's validity period.
+     * Idempotent: a recipient who already has a credential for that template +
+     * group is not re-issued — but its number and dates are backfilled, so
+     * re-running after an earlier seed (which generated fresh numbers and used
+     * today's date) repairs those records in place.
      */
     private function seedCertificates(): void
     {
         $issueService = app(CertificateIssueService::class);
 
-        // We have no original issue dates from the previous environment, so use
-        // today's date as the migration date; expiry follows the template.
-        $issueDate = Carbon::today();
+        // Fallback for any recipient not present in the legacy export: today.
+        $today = Carbon::today();
 
         $templatesByName = CertificateTemplate::all()->keyBy('name');
+        $legacyCertificates = $this->legacyCertificates();
 
-        DB::transaction(function () use ($issueService, $issueDate, $templatesByName) {
-            Group::with('recipients')->get()->each(function (Group $group) use ($issueService, $issueDate, $templatesByName) {
+        DB::transaction(function () use ($issueService, $today, $templatesByName, $legacyCertificates) {
+            Group::with('recipients')->get()->each(function (Group $group) use ($issueService, $today, $templatesByName, $legacyCertificates) {
                 $template = $templatesByName->get($group->name);
 
                 if (! $template) {
@@ -72,20 +79,82 @@ class LegacyDataSeeder extends Seeder
                 }
 
                 foreach ($group->recipients as $recipient) {
-                    $alreadyIssued = Certificate::withTrashed()
+                    $legacy = $legacyCertificates[$recipient->email.'|'.$group->name] ?? null;
+
+                    $completionDate = $legacy && $legacy['completion_date'] ? Carbon::parse($legacy['completion_date']) : $today;
+                    $issueDate = $legacy && $legacy['issue_date'] ? Carbon::parse($legacy['issue_date']) : $today;
+
+                    $certificate = Certificate::withTrashed()
                         ->where('certificate_template_id', $template->id)
                         ->where('recipient_id', $recipient->id)
                         ->where('group_id', $group->id)
-                        ->exists();
+                        ->first();
 
-                    if ($alreadyIssued) {
-                        continue;
+                    if (! $certificate) {
+                        // createCertificate() generates a number and derives the
+                        // expiry from the issue date; we override the number below
+                        // when the legacy one is known, leaving genuinely new
+                        // recipients on a freshly generated number.
+                        $certificate = $issueService->createCertificate($template, $recipient, $completionDate, $issueDate, [], $group);
+                    } elseif ($legacy) {
+                        // Repair an earlier seed: restore the carried-over dates
+                        // and the expiry that follows from them.
+                        $certificate->completion_date = $completionDate;
+                        $certificate->issue_date = $issueDate;
+                        $certificate->expiry_date = $issueService->expiryFor($template, $issueDate);
                     }
 
-                    $issueService->createCertificate($template, $recipient, $issueDate, $issueDate, [], $group);
+                    if ($legacy && $certificate->certificate_number !== $legacy['number']) {
+                        $certificate->certificate_number = $legacy['number'];
+                    }
+
+                    if ($certificate->isDirty()) {
+                        $certificate->save();
+                    }
                 }
             });
         });
+    }
+
+    /**
+     * Map each recipient's credential to the number, completion date and issue
+     * date it carried in the previous environment, keyed by
+     * "<email>|<certificate_name>". Emails are normalised to match how
+     * recipients are stored (trimmed + lowercased), and certificate_name
+     * matches the template/group name.
+     *
+     * The source holds a few re-issues (the same email + credential more than
+     * once); the first record seen wins, matching the seeder's other "first
+     * seen" rules and the one-credential-per-recipient-per-group model here.
+     *
+     * @return array<string, array{number: string, completion_date: ?string, issue_date: ?string}>
+     */
+    private function legacyCertificates(): array
+    {
+        $path = __DIR__.'/data/legacy_certificate_numbers.json';
+
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $map = [];
+        foreach (json_decode(file_get_contents($path), true) ?? [] as $row) {
+            $email = strtolower(trim($row['email'] ?? ''));
+            $name = trim($row['certificate_name'] ?? '');
+            $number = trim($row['certificate_number'] ?? '');
+
+            if ($email === '' || $name === '' || $number === '') {
+                continue;
+            }
+
+            $map[$email.'|'.$name] ??= [
+                'number' => $number,
+                'completion_date' => $row['completion_date'] ?? null,
+                'issue_date' => $row['issue_date'] ?? null,
+            ];
+        }
+
+        return $map;
     }
 
     /**

@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\CertificateStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Mail\OrganizationWelcomeMail;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Group;
+use App\Models\MailLog;
 use App\Models\Organization;
 use App\Models\Recipient;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -64,9 +67,15 @@ class OrganizationController extends Controller
             'password' => $data['provision'] === 'password' ? $data['password'] : Str::random(40),
         ]);
 
-        if ($data['provision'] === 'link') {
+        $setupLinkSent = $data['provision'] === 'link';
+
+        if ($setupLinkSent) {
             Password::sendResetLink(['email' => $user->email]);
         }
+
+        // Always notify a newly created organization, whichever way it was
+        // provisioned (the setup-link email above only covers the 'link' path).
+        $this->sendWelcomeMail($org, $setupLinkSent);
 
         activity()->performedOn($org)->causedBy($request->user())->log('organization_created');
 
@@ -191,6 +200,24 @@ class OrganizationController extends Controller
         activity()->performedOn($organization)->causedBy($request->user())->log('organization_setup_link_sent');
 
         return response()->json(['message' => 'Setup link sent to '.$organization->email]);
+    }
+
+    /**
+     * Queue the welcome email for a newly created organization and log it, the
+     * same way every other outgoing mail is recorded.
+     */
+    private function sendWelcomeMail(Organization $organization, bool $setupLinkSent): void
+    {
+        $loginUrl = rtrim(config('app.url'), '/').'/login';
+
+        Mail::to($organization->email)->queue(new OrganizationWelcomeMail($organization, $loginUrl, $setupLinkSent));
+
+        MailLog::create([
+            'mailable_type' => OrganizationWelcomeMail::class,
+            'recipient_email' => $organization->email,
+            'subject' => 'Welcome to '.config('app.name'),
+            'status' => 'queued',
+        ]);
     }
 
     private function validateOrganization(Request $request, ?Organization $organization = null): array
