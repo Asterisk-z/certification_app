@@ -7,7 +7,9 @@ use App\Exports\ImportFormatExport;
 use App\Models\CertificateTemplate;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Models\User;
 use App\Services\CertificateNumberService;
+use App\Services\OrganizationLimitService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -26,10 +28,15 @@ class RecipientsImport implements ToCollection, WithHeadingRow
         private readonly CertificateTemplate $template,
         private readonly ?Group $group,
         private readonly CertificateNumberService $numbers,
+        private readonly ?User $actor = null,
     ) {}
 
     public function collection(Collection $rows): void
     {
+        if ($this->actor) {
+            app(OrganizationLimitService::class)->assertImportWithinLimits($this->actor, $rows, $this->group);
+        }
+
         $customSlugs = array_values(array_diff(
             ImportFormatExport::headingsFor($this->template),
             ['full_name', 'email', 'completion_date', 'issue_date']

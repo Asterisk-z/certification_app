@@ -92,7 +92,7 @@ class RecipientImportController extends Controller
             ? Group::where('uuid', $validated['group_uuid'])->firstOrFail()
             : null;
 
-        $import = new ExistingCertificatesImport($template, $group);
+        $import = new ExistingCertificatesImport($template, $group, $request->user());
         Excel::import($import, $validated['file']);
 
         activity()->causedBy($request->user())
@@ -149,8 +149,8 @@ class RecipientImportController extends Controller
             : null;
 
         $import = $existing
-            ? new ExistingCertificatesImport($template, $group)
-            : new RecipientsImport($template, $group, $numbers);
+            ? new ExistingCertificatesImport($template, $group, $request->user())
+            : new RecipientsImport($template, $group, $numbers, $request->user());
         Excel::import($import, $validated['file']);
 
         activity()->performedOn($template)->causedBy($request->user())

@@ -15,6 +15,7 @@ class OrganizationFactory extends Factory
             'code' => strtoupper(fake()->unique()->lexify('????')),
             'status' => 'active',
             'features' => null,
+            'limits' => null,
         ];
     }
 

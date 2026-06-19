@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Services\OrganizationLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,8 +28,10 @@ class GroupController extends Controller
         return response()->json($query->paginate((int) $request->query('per_page', 15)));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, OrganizationLimitService $limits): JsonResponse
     {
+        $limits->assertCanCreate($request->user(), 'groups');
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -61,14 +64,25 @@ class GroupController extends Controller
         return response()->json(['message' => 'Group deleted.']);
     }
 
-    public function addRecipients(Request $request, Group $group): JsonResponse
+    public function addRecipients(Request $request, Group $group, OrganizationLimitService $limits): JsonResponse
     {
         $data = $request->validate([
             'recipient_uuids' => ['required', 'array', 'min:1'],
             'recipient_uuids.*' => ['uuid'],
         ]);
 
-        $ids = Recipient::whereIn('uuid', $data['recipient_uuids'])->pluck('id');
+        $recipients = Recipient::whereIn('uuid', $data['recipient_uuids'])->get();
+        $alreadyIn = $group->recipients()->pluck('recipients.id')->all();
+
+        // A new membership for a recipient must not push them past their
+        // groups-per-recipient cap (recipients already in this group are no-ops).
+        foreach ($recipients as $recipient) {
+            if (! in_array($recipient->id, $alreadyIn, true)) {
+                $limits->assertGroupsPerRecipient($request->user(), $recipient, $recipient->groups()->count() + 1);
+            }
+        }
+
+        $ids = $recipients->pluck('id');
         $group->recipients()->syncWithoutDetaching($ids);
 
         activity()->performedOn($group)->causedBy($request->user())

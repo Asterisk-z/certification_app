@@ -8,6 +8,8 @@ use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Models\User;
+use App\Services\OrganizationLimitService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -31,10 +33,15 @@ class ExistingCertificatesImport implements ToCollection, WithHeadingRow
     public function __construct(
         private readonly ?CertificateTemplate $template,
         private readonly ?Group $group,
+        private readonly ?User $actor = null,
     ) {}
 
     public function collection(Collection $rows): void
     {
+        if ($this->actor) {
+            app(OrganizationLimitService::class)->assertImportWithinLimits($this->actor, $rows, $this->group);
+        }
+
         $customSlugs = array_values(array_diff(
             ExistingCertificatesFormatExport::headingsFor($this->template),
             ['certificate_number', 'full_name', 'email', 'completion_date', 'issue_date', 'expiry_date', 'certificate_title']

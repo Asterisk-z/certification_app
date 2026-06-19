@@ -25,11 +25,52 @@ const savingSettings = ref(false);
 // Toggle models, kept in sync with the loaded org.
 const features = reactive({ templates: true, certificates: true, recipients: true, groups: true });
 
+// Certificate-admin team.
+const team = ref(null);
+const invite = reactive({ name: '', email: '' });
+const inviteErrors = ref({});
+const inviting = ref(false);
+
 onMounted(async () => {
     org.value = await store.fetchOne(route.params.uuid);
     Object.assign(features, { templates: true, certificates: true, recipients: true, groups: true, ...(org.value.features || {}) });
     stats.value = await store.fetchStats(route.params.uuid);
+    team.value = await store.fetchTeam(route.params.uuid);
 });
+
+async function loadTeam() {
+    team.value = await store.fetchTeam(route.params.uuid);
+}
+
+async function sendInvite() {
+    inviting.value = true;
+    inviteErrors.value = {};
+    try {
+        await store.inviteTeam(route.params.uuid, { name: invite.name, email: invite.email });
+        invite.name = '';
+        invite.email = '';
+        await loadTeam();
+        ui.success('Certificate admin invited — a setup link was emailed.');
+    } catch (e) {
+        inviteErrors.value = e.response?.data?.errors || {};
+        if (!Object.keys(inviteErrors.value).length) {
+            ui.error(e.response?.data?.message || 'Could not invite the admin.');
+        }
+    } finally {
+        inviting.value = false;
+    }
+}
+
+async function removeMember(member) {
+    if (!confirm(`Remove ${member.name} (${member.email})?`)) return;
+    try {
+        await store.removeTeam(route.params.uuid, member.uuid);
+        await loadTeam();
+        ui.success('Certificate admin removed.');
+    } catch (e) {
+        ui.error(e.response?.data?.message || 'Could not remove the admin.');
+    }
+}
 
 // Links carry the org so the destination list filters to it.
 function listLink(routeName) {
@@ -124,6 +165,52 @@ const totalsCards = computed(() => [
                     </label>
                 </div>
             </div>
+        </div>
+
+        <!-- Certificate-admin team -->
+        <div v-if="team" class="rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
+            <div class="flex items-center justify-between">
+                <h2 class="font-semibold text-slate-900 dark:text-slate-100">Certificate admins</h2>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ team.used }}<template v-if="team.limit != null"> / {{ team.limit }}</template> used
+                </span>
+            </div>
+
+            <ul class="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
+                <li v-for="member in team.data" :key="member.uuid" class="flex items-center justify-between gap-3 py-2.5">
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {{ member.name }}
+                            <span v-if="member.is_primary" class="ml-1 rounded-full bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">Primary</span>
+                            <span v-if="!member.active" class="ml-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Pending</span>
+                        </p>
+                        <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ member.email }}</p>
+                    </div>
+                    <button v-if="!member.is_primary" type="button" class="shrink-0 text-sm font-medium text-rose-600 hover:text-rose-700" @click="removeMember(member)">
+                        Remove
+                    </button>
+                </li>
+            </ul>
+
+            <form class="mt-4 flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800 pt-4 sm:flex-row" @submit.prevent="sendInvite">
+                <div class="flex-1">
+                    <input v-model="invite.name" type="text" placeholder="Full name" required
+                        class="block w-full rounded-lg border-slate-300 dark:border-slate-700 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                    <p v-if="inviteErrors.name" class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ inviteErrors.name[0] }}</p>
+                </div>
+                <div class="flex-1">
+                    <input v-model="invite.email" type="email" placeholder="Email" required
+                        class="block w-full rounded-lg border-slate-300 dark:border-slate-700 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                    <p v-if="inviteErrors.email" class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ inviteErrors.email[0] }}</p>
+                </div>
+                <button type="submit" :disabled="inviting"
+                    class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                    {{ inviting ? 'Inviting…' : 'Invite admin' }}
+                </button>
+            </form>
+            <p v-if="team.limit != null && team.used >= team.limit" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                This organization is at its configured certificate-admin limit ({{ team.limit }}). As an admin you can still add more.
+            </p>
         </div>
 
         <!-- Stat cards (links to the org's filtered lists) -->

@@ -6,6 +6,7 @@ use App\Exports\RecipientsFormatExport;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Services\OrganizationLimitService;
 use App\Services\RecipientInviteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class RecipientBulkController extends Controller
      * uploaded Excel/CSV (columns: full_name, email, phone), optionally
      * attaching everyone to one or more groups.
      */
-    public function store(Request $request, RecipientInviteService $invites): JsonResponse
+    public function store(Request $request, RecipientInviteService $invites, OrganizationLimitService $limits): JsonResponse
     {
         $validated = $request->validate([
             'text' => ['nullable', 'string', 'max:100000', 'required_without:file'],
@@ -39,6 +40,17 @@ class RecipientBulkController extends Controller
         if ($rows instanceof JsonResponse) {
             return $rows;
         }
+
+        // Enforce the recipients cap up front: count the distinct emails that
+        // would become active (new, or restored from trashed — both add to the
+        // active count). Existing live recipients are only updated, not added.
+        $emails = collect($rows)
+            ->map(fn ($row) => strtolower(trim((string) ($row['email'] ?? ''))))
+            ->filter()->unique();
+        $live = Recipient::whereIn('email', $emails->all())->pluck('email')
+            ->map(fn ($e) => strtolower($e))->all();
+        $newCount = $emails->reject(fn ($e) => in_array($e, $live, true))->count();
+        $limits->assertCanCreate($request->user(), 'recipients', $newCount);
 
         $groupIds = empty($validated['group_uuids'])
             ? collect()

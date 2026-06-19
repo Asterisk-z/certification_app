@@ -65,5 +65,21 @@ export const useOrganizationsStore = defineStore('organizations', {
             const { data } = await http.get(`/admin/organizations/${uuid}/stats`);
             return data;
         },
+
+        async fetchTeam(uuid) {
+            const { data } = await http.get(`/admin/organizations/${uuid}/team`);
+            return data;
+        },
+
+        async inviteTeam(uuid, payload) {
+            await ensureCsrf();
+            const { data } = await http.post(`/admin/organizations/${uuid}/team`, payload);
+            return data;
+        },
+
+        async removeTeam(uuid, userUuid) {
+            await ensureCsrf();
+            await http.delete(`/admin/organizations/${uuid}/team/${userUuid}`);
+        },
     },
 });

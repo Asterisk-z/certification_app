@@ -100,6 +100,21 @@ class Certificate extends Model
         return $this->title ?? $this->template?->name;
     }
 
+    /**
+     * Certificates that count toward an organization's usage limits: the live
+     * ones a holder/group/org currently has. Superseded states (renewed,
+     * revoked, cancelled, expired, failed) are excluded, so e.g. renewing a
+     * credential is net-zero against a per-recipient cap.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            CertificateStatus::Pending,
+            CertificateStatus::Queued,
+            CertificateStatus::Sent,
+        ]);
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($term)).'%';

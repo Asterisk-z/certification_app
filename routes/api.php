@@ -21,6 +21,7 @@ use App\Http\Controllers\Auth\InviteController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OrganizationTeamController;
 use App\Http\Controllers\Public\ChangelogController;
 use App\Http\Controllers\Public\VerificationController;
 use App\Http\Controllers\Recipient\PortalController;
@@ -133,6 +134,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(functi
     Route::post('organizations/{organization:uuid}/resend-setup', [OrganizationController::class, 'resendSetup']);
     Route::patch('organizations/{organization:uuid}/settings', [OrganizationController::class, 'updateSettings']);
     Route::get('organizations/{organization:uuid}/stats', [OrganizationController::class, 'stats']);
+
+    // Certificate-admin (team) management for any organization.
+    Route::get('organizations/{organization:uuid}/team', [OrganizationTeamController::class, 'index']);
+    Route::post('organizations/{organization:uuid}/team', [OrganizationTeamController::class, 'store']);
+    Route::delete('organizations/{organization:uuid}/team/{user:uuid}', [OrganizationTeamController::class, 'destroy']);
+
     Route::apiResource('organizations', OrganizationController::class)->scoped(['organization' => 'uuid']);
 
     Route::get('logs/mail', [LogController::class, 'mail']);
@@ -148,7 +155,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(functi
 // Organization portal — same management surface, scoped to the org. Must be an
 // active organization (EnsureActiveOrganization).
 // ---------------------------------------------------------------------------
-Route::prefix('org')->middleware(['auth:sanctum', 'role:organization', 'org.active'])->group($tenantRoutes);
+Route::prefix('org')->middleware(['auth:sanctum', 'role:organization', 'org.active'])->group(function () use ($tenantRoutes) {
+    $tenantRoutes();
+
+    // The org manages its own certificate-admin team (capped by certificate_admins).
+    Route::get('team', [OrganizationTeamController::class, 'index']);
+    Route::post('team', [OrganizationTeamController::class, 'store']);
+    Route::delete('team/{user:uuid}', [OrganizationTeamController::class, 'destroy']);
+});
 
 // ---------------------------------------------------------------------------
 // Recipient portal

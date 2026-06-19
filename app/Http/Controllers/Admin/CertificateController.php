@@ -12,6 +12,7 @@ use App\Models\Recipient;
 use App\Services\CertificateIssueService;
 use App\Services\CertificateNumberService;
 use App\Services\CertificateRenderService;
+use App\Services\OrganizationLimitService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class CertificateController extends Controller
     /**
      * Send a ready template to a group and/or hand-picked recipients.
      */
-    public function send(Request $request, CertificateTemplate $template): JsonResponse
+    public function send(Request $request, CertificateTemplate $template, OrganizationLimitService $limits): JsonResponse
     {
         $validated = $request->validate([
             'group_uuid' => ['nullable', 'uuid', 'exists:groups,uuid', 'required_without:recipient_uuids'],
@@ -94,6 +95,15 @@ class CertificateController extends Controller
             return response()->json(['message' => 'No recipients to send to.'], 422);
         }
 
+        // Enforce the org's caps before issuing anything: total credentials,
+        // per-group, and per-recipient (each recipient gains exactly one here).
+        $actor = $request->user();
+        $limits->assertCanCreate($actor, 'certificates', $recipients->count());
+        $limits->assertCertificatesPerGroup($actor, $group, $recipients->count());
+        foreach ($recipients as $recipient) {
+            $limits->assertCertificatesPerRecipient($actor, $recipient, 1);
+        }
+
         $certificates = $this->issuer->issue(
             $template,
             $recipients,
@@ -115,7 +125,7 @@ class CertificateController extends Controller
     /**
      * Manually create a certificate, optionally with a custom number.
      */
-    public function storeManual(Request $request, CertificateNumberService $numbers): JsonResponse
+    public function storeManual(Request $request, CertificateNumberService $numbers, OrganizationLimitService $limits): JsonResponse
     {
         $validated = $request->validate([
             'template_uuid' => ['nullable', 'uuid', 'exists:certificate_templates,uuid'],
@@ -141,6 +151,12 @@ class CertificateController extends Controller
 
         $completionDate = filled($validated['completion_date'] ?? null) ? Carbon::parse($validated['completion_date']) : null;
         $issueDate = Carbon::parse($validated['issue_date']);
+
+        // Enforce the org's caps for this single new credential.
+        $actor = $request->user();
+        $limits->assertCanCreate($actor, 'certificates', 1);
+        $limits->assertCertificatesPerRecipient($actor, $recipient, 1);
+        $limits->assertCertificatesPerGroup($actor, $group, 1);
 
         if ($template) {
             $certificate = $this->issuer->createCertificate(

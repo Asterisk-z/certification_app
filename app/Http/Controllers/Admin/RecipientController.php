@@ -6,9 +6,11 @@ use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Recipient;
+use App\Services\OrganizationLimitService;
 use App\Services\RecipientInviteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class RecipientController extends Controller
@@ -35,9 +37,11 @@ class RecipientController extends Controller
         return response()->json($query->paginate((int) $request->query('per_page', 15)));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, OrganizationLimitService $limits): JsonResponse
     {
         $orgId = $request->user()->organization_id;
+
+        $limits->assertCanCreate($request->user(), 'recipients');
 
         $data = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
@@ -48,12 +52,20 @@ class RecipientController extends Controller
             'group_uuids.*' => ['uuid', 'exists:groups,uuid'],
         ]);
 
-        $recipient = Recipient::create($data);
+        $groupIds = empty($data['group_uuids'])
+            ? collect()
+            : Group::whereIn('uuid', $data['group_uuids'])->pluck('id');
 
-        if (! empty($data['group_uuids'])) {
-            $groupIds = Group::whereIn('uuid', $data['group_uuids'])->pluck('id');
-            $recipient->groups()->sync($groupIds);
-        }
+        $recipient = DB::transaction(function () use ($data, $groupIds, $limits, $request) {
+            $recipient = Recipient::create($data);
+
+            if ($groupIds->isNotEmpty()) {
+                $limits->assertGroupsPerRecipient($request->user(), $recipient, $groupIds->count());
+                $recipient->groups()->sync($groupIds);
+            }
+
+            return $recipient;
+        });
 
         // Every new recipient is emailed a portal invite.
         $this->invites->send($recipient, $request->user());

@@ -15,10 +15,25 @@ class Organization extends Model
     use HasFactory, HasUuid, LogsActivity, SoftDeletes;
 
     /**
-     * Features an org may use. Absent/true = allowed; a numeric value caps the
-     * record count for that feature.
+     * Features an org may use (on/off gating). Absent/true = allowed; false = blocked.
      */
     public const FEATURES = ['templates', 'groups', 'recipients', 'certificates'];
+
+    /**
+     * Per-organization usage caps. A positive integer caps the count; a
+     * missing/null entry means unlimited. Enforced for organization users only
+     * (admins bypass) via OrganizationLimitService.
+     */
+    public const LIMITS = [
+        'certificates',
+        'certificate_admins',
+        'templates',
+        'groups',
+        'recipients',
+        'certificates_per_recipient',
+        'groups_per_recipient',
+        'certificates_per_group',
+    ];
 
     protected $fillable = [
         'name',
@@ -28,12 +43,14 @@ class Organization extends Model
         'code',
         'status',
         'features',
+        'limits',
     ];
 
     protected function casts(): array
     {
         return [
             'features' => 'array',
+            'limits' => 'array',
         ];
     }
 
@@ -53,13 +70,14 @@ class Organization extends Model
     }
 
     /**
-     * The configured cap for a feature, or null when unlimited.
+     * The configured cap for a limit key (see self::LIMITS), or null when
+     * unlimited. Only positive integers act as a cap.
      */
-    public function limitFor(string $feature): ?int
+    public function limitFor(string $key): ?int
     {
-        $value = $this->features[$feature] ?? null;
+        $value = $this->limits[$key] ?? null;
 
-        return is_int($value) ? $value : null;
+        return is_int($value) && $value > 0 ? $value : null;
     }
 
     public function users(): HasMany
@@ -90,7 +108,7 @@ class Organization extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'code', 'status', 'features'])
+            ->logOnly(['name', 'email', 'code', 'status', 'features', 'limits'])
             ->logOnlyDirty();
     }
 }

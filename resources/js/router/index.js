@@ -85,6 +85,7 @@ const routes = [
             { path: 'certificates/import', name: 'org.certificates.import', component: () => import('@/pages/admin/certificates/ImportPage.vue') },
             { path: 'certificates/manual', name: 'org.certificates.manual', component: () => import('@/pages/admin/certificates/ManualCreatePage.vue') },
             { path: 'certificates/:uuid', name: 'org.certificates.detail', component: () => import('@/pages/admin/certificates/CertificateDetailPage.vue') },
+            { path: 'team', name: 'org.team', component: () => import('@/pages/org/TeamPage.vue') },
         ],
     },
 

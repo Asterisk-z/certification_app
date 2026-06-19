@@ -54,6 +54,7 @@ class OrganizationController extends Controller
             'code' => $data['code'] ?? $this->uniqueCode($data['name']),
             'status' => $data['status'] ?? 'active',
             'features' => $this->normalizeFeatures($data['features'] ?? null),
+            'limits' => $this->normalizeLimits($data['limits'] ?? null),
             'logo_path' => $this->storeLogo($request),
         ]);
 
@@ -98,6 +99,7 @@ class OrganizationController extends Controller
             'code' => $data['code'] ?? $organization->code,
             'status' => $data['status'] ?? $organization->status,
             'features' => $this->normalizeFeatures($data['features'] ?? null),
+            'limits' => $this->normalizeLimits($data['limits'] ?? null),
         ]);
 
         if ($logo = $this->storeLogo($request)) {
@@ -109,8 +111,10 @@ class OrganizationController extends Controller
 
         $organization->save();
 
-        // Keep the login account in sync; optionally reset its password.
-        if ($user = $organization->users()->where('role', UserRole::Organization)->first()) {
+        // Keep the primary login account (the original, lowest-id org user) in
+        // sync; optionally reset its password. Additional team members added via
+        // OrganizationTeamController are left untouched.
+        if ($user = $organization->users()->where('role', UserRole::Organization)->orderBy('id')->first()) {
             $user->email = $organization->email;
             $user->name = $organization->name;
             if (! empty($data['password'])) {
@@ -142,6 +146,7 @@ class OrganizationController extends Controller
         $data = $request->validate([
             'status' => ['nullable', 'in:active,inactive'],
             'features' => ['nullable', 'array'],
+            ...$this->limitRules(),
         ]);
 
         if (! empty($data['status'])) {
@@ -150,6 +155,10 @@ class OrganizationController extends Controller
 
         if (array_key_exists('features', $data)) {
             $organization->features = $this->normalizeFeatures($data['features']);
+        }
+
+        if (array_key_exists('limits', $data)) {
+            $organization->limits = $this->normalizeLimits($data['limits']);
         }
 
         $organization->save();
@@ -223,7 +232,7 @@ class OrganizationController extends Controller
     private function validateOrganization(Request $request, ?Organization $organization = null): array
     {
         $orgId = $organization?->id;
-        $userId = $organization?->users()->where('role', UserRole::Organization)->value('id');
+        $userId = $organization?->users()->where('role', UserRole::Organization)->orderBy('id')->value('id');
 
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -236,12 +245,28 @@ class OrganizationController extends Controller
             'code' => ['nullable', 'string', 'max:50', Rule::unique('organizations', 'code')->ignore($orgId)],
             'status' => ['nullable', 'in:active,inactive'],
             'features' => ['nullable', 'array'],
+            ...$this->limitRules(),
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp,svg', 'max:5120'],
             // Provisioning only applies on create; ignored on update unless a
             // password is supplied to reset the login.
             'provision' => [$organization ? 'nullable' : 'required', 'in:password,link'],
             'password' => ['nullable', 'required_if:provision,password', 'string', 'min:8'],
         ]);
+    }
+
+    /**
+     * Validation rules for the per-organization limits map. Each cap is an
+     * optional positive integer; blank/absent means unlimited.
+     */
+    private function limitRules(): array
+    {
+        $rules = ['limits' => ['nullable', 'array']];
+
+        foreach (Organization::LIMITS as $key) {
+            $rules["limits.{$key}"] = ['nullable', 'integer', 'min:1'];
+        }
+
+        return $rules;
     }
 
     private function normalizeFeatures(?array $features): ?array
@@ -253,6 +278,29 @@ class OrganizationController extends Controller
         return collect(Organization::FEATURES)
             ->mapWithKeys(fn ($f) => [$f => $features[$f] ?? true])
             ->all();
+    }
+
+    /**
+     * Keep only positive integer caps (blank/absent = unlimited). Returns null
+     * when nothing is capped so the column stays empty.
+     */
+    private function normalizeLimits(?array $limits): ?array
+    {
+        if ($limits === null) {
+            return null;
+        }
+
+        $clean = [];
+
+        foreach (Organization::LIMITS as $key) {
+            $value = $limits[$key] ?? null;
+
+            if (is_numeric($value) && (int) $value > 0) {
+                $clean[$key] = (int) $value;
+            }
+        }
+
+        return $clean ?: null;
     }
 
     private function storeLogo(Request $request): ?string

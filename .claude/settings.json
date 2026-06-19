@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"REMINDER: After completing this request, append a concise dated entry to docs/conversation-log.md summarizing what was asked and the actions/changes you took. Follow the template at the top of that file, add the new entry at the top of the Sessions list (newest first), use today's date, and keep it to a few lines. Skip logging for trivial clarifying-only turns where no work was done.\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -11,6 +11,29 @@ const FEATURES = [
     { key: 'certificates', label: 'Credentials' },
 ];
 
+// Per-organization usage caps (blank = unlimited). Mirrors Organization::LIMITS.
+const LIMIT_TOTALS = [
+    { key: 'certificates', label: 'Credentials' },
+    { key: 'certificate_admins', label: 'Certificate admins' },
+    { key: 'templates', label: 'Templates' },
+    { key: 'groups', label: 'Groups' },
+    { key: 'recipients', label: 'Recipients' },
+];
+
+const LIMIT_SCOPED = [
+    { key: 'certificates_per_recipient', label: 'Credentials per recipient' },
+    { key: 'groups_per_recipient', label: 'Groups per recipient' },
+    { key: 'certificates_per_group', label: 'Credentials per group' },
+];
+
+const ALL_LIMITS = [...LIMIT_TOTALS, ...LIMIT_SCOPED];
+
+function limitsFromOrg(orgLimits) {
+    return Object.fromEntries(
+        ALL_LIMITS.map((l) => [l.key, orgLimits && orgLimits[l.key] != null ? orgLimits[l.key] : '']),
+    );
+}
+
 const route = useRoute();
 const router = useRouter();
 const store = useOrganizationsStore();
@@ -29,6 +52,7 @@ const form = reactive({
     description: '',
     status: 'active',
     features: { templates: true, recipients: true, groups: true, certificates: true },
+    limits: limitsFromOrg(null),
     provision: 'link',
     password: '',
 });
@@ -43,6 +67,7 @@ onMounted(async () => {
         description: org.description || '',
         status: org.status,
         features: { templates: true, recipients: true, groups: true, certificates: true, ...(org.features || {}) },
+        limits: limitsFromOrg(org.limits),
         provision: 'link',
         password: '',
     });
@@ -57,6 +82,10 @@ function buildPayload() {
     if (form.description) fd.append('description', form.description);
     fd.append('status', form.status);
     FEATURES.forEach((f) => fd.append(`features[${f.key}]`, form.features[f.key] ? '1' : '0'));
+    ALL_LIMITS.forEach((l) => {
+        const v = form.limits[l.key];
+        if (v !== '' && v !== null && v !== undefined) fd.append(`limits[${l.key}]`, v);
+    });
     if (!editing.value) fd.append('provision', form.provision);
     if (form.password) {
         if (!editing.value) fd.append('provision', 'password');
@@ -148,6 +177,30 @@ async function resendSetup() {
                         <input v-model="form.features[f.key]" type="checkbox" class="rounded border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500" />
                         {{ f.label }}
                     </label>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+                <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    Usage limits <span class="font-normal text-slate-400">(blank = unlimited)</span>
+                </h2>
+                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div v-for="l in LIMIT_TOTALS" :key="l.key">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{{ l.label }}</label>
+                        <input v-model="form.limits[l.key]" type="number" min="1" placeholder="Unlimited"
+                            class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                        <p v-if="errors[`limits.${l.key}`]" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors[`limits.${l.key}`][0] }}</p>
+                    </div>
+                </div>
+
+                <h3 class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Per recipient / per group</h3>
+                <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div v-for="l in LIMIT_SCOPED" :key="l.key">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{{ l.label }}</label>
+                        <input v-model="form.limits[l.key]" type="number" min="1" placeholder="Unlimited"
+                            class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                        <p v-if="errors[`limits.${l.key}`]" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ errors[`limits.${l.key}`][0] }}</p>
+                    </div>
                 </div>
             </div>
 

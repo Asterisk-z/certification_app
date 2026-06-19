@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TemplateRequest;
 use App\Models\CertificateTemplate;
+use App\Services\OrganizationLimitService;
 use App\Services\TemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,8 +38,10 @@ class TemplateController extends Controller
         return response()->json($query->paginate((int) $request->query('per_page', 12)));
     }
 
-    public function store(TemplateRequest $request): JsonResponse
+    public function store(TemplateRequest $request, OrganizationLimitService $limits): JsonResponse
     {
+        $limits->assertCanCreate($request->user(), 'templates');
+
         $template = $this->templates->create(
             $request->user(),
             $request->safe()->except('background'),
@@ -71,8 +74,10 @@ class TemplateController extends Controller
         return response()->json(['message' => 'Template deleted.']);
     }
 
-    public function duplicate(CertificateTemplate $template): JsonResponse
+    public function duplicate(Request $request, CertificateTemplate $template, OrganizationLimitService $limits): JsonResponse
     {
+        $limits->assertCanCreate($request->user(), 'templates');
+
         return response()->json($this->templates->duplicate($template), 201);
     }
 }
