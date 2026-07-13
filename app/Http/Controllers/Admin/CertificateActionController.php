@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendCertificateJob;
 use App\Mail\CertificateRevokedMail;
 use App\Models\Certificate;
+use App\Models\CertificateCcEmail;
 use App\Models\MailLog;
 use App\Notifications\CertificateRevokedNotification;
 use App\Services\CertificateIssueService;
@@ -207,7 +208,13 @@ class CertificateActionController extends Controller
 
     private function notifyRevocation(Certificate $certificate, ?string $reason): void
     {
-        Mail::to($certificate->recipient->email)->queue(new CertificateRevokedMail($certificate, $reason));
+        $mailer = Mail::to($certificate->recipient->email);
+
+        if ($cc = CertificateCcEmail::recipientsFor($certificate)) {
+            $mailer->cc($cc);
+        }
+
+        $mailer->queue(new CertificateRevokedMail($certificate, $reason));
 
         $certificate->recipient->user?->notify(new CertificateRevokedNotification($certificate));
 

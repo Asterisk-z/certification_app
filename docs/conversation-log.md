@@ -25,6 +25,13 @@ Each entry captures one conversation/session: what was asked, what was decided, 
 
 <!-- newest first -->
 
+### 2026-06-29 — Per-organization CC list for certificate emails
+
+- **Goal:** Copy the organization's admin on every certificate email (issued + revoked), and let the org admin manage the copied address(es) as a CRUD reached from the certificates page.
+- **Decisions:** New `certificate_cc_emails` table (`organization_id` nullable = platform/admin certs), model with `BelongsToOrganization` so org users are auto-scoped. Resolution lives in `CertificateCcEmail::recipientsFor()`: use the org's configured list, else fall back to the org's own contact email (so the admin is copied by default), always excluding the recipient's own address and de-duping. CC injected at the two — and only two — send points: `SendCertificateJob` (issued) and `CertificateActionController::notifyRevocation` (single + bulk revoke). CRUD mounted in the shared `$tenantRoutes` under `feature:certificates`, so it works in both `/admin` and `/org`.
+- **Changes:** migration + `CertificateCcEmail` model + factory; `CertificateCcEmailController` (index/store/update/destroy, org-scoped unique email); routes; CC wiring in `SendCertificateJob` + `CertificateActionController`. Frontend: `certificateCcEmails` store, `CcEmailListPage.vue` (modal CRUD), router entries (`admin`/`org`.certificates.cc), and a "CC recipients" link in the Credentials header. New `CertificateCcEmailTest` (8 tests, green).
+- **Follow-ups:** Pre-existing date-sensitive renew tests in `CertificateLifecycleTest` still fail (hardcoded past dates, unrelated). MailLog still records only the primary recipient, not the CC list.
+
 ### 2026-06-19 — Fix password-reset link for SPA (setup/invite emails)
 
 - **Goal:** Resolve a runtime error surfaced by the new team-invite endpoint: `Route [password.reset] not defined`.

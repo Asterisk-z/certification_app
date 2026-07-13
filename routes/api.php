@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CertificateActionController;
+use App\Http\Controllers\Admin\CertificateCcEmailController;
 use App\Http\Controllers\Admin\CertificateController;
 use App\Http\Controllers\Admin\CertificateStreamController;
 use App\Http\Controllers\Admin\CertificateUploadController;
@@ -95,6 +96,12 @@ $tenantRoutes = function () {
     });
 
     Route::middleware('feature:certificates')->group(function () {
+        // Per-org CC list applied to every certificate mail (issued + revoked).
+        Route::get('certificate-cc-emails', [CertificateCcEmailController::class, 'index']);
+        Route::post('certificate-cc-emails', [CertificateCcEmailController::class, 'store']);
+        Route::put('certificate-cc-emails/{ccEmail:uuid}', [CertificateCcEmailController::class, 'update']);
+        Route::delete('certificate-cc-emails/{ccEmail:uuid}', [CertificateCcEmailController::class, 'destroy']);
+
         Route::get('templates/{template:uuid}/import-format', [RecipientImportController::class, 'format']);
         Route::post('templates/{template:uuid}/import', [RecipientImportController::class, 'store']);
 

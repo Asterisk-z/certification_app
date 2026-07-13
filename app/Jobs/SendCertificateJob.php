@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\CertificateStatus;
 use App\Mail\CertificateIssuedMail;
 use App\Models\Certificate;
+use App\Models\CertificateCcEmail;
 use App\Models\MailLog;
 use App\Notifications\CertificateIssuedNotification;
 use App\Services\CertificateRenderService;
@@ -44,7 +45,13 @@ class SendCertificateJob implements ShouldQueue
             $renderer->png($certificate);
         }
 
-        Mail::to($certificate->recipient->email)->send(new CertificateIssuedMail($certificate));
+        $mailer = Mail::to($certificate->recipient->email);
+
+        if ($cc = CertificateCcEmail::recipientsFor($certificate)) {
+            $mailer->cc($cc);
+        }
+
+        $mailer->send(new CertificateIssuedMail($certificate));
 
         $certificate->forceFill([
             'status' => CertificateStatus::Sent,
