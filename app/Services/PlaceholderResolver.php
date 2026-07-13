@@ -17,18 +17,25 @@ class PlaceholderResolver
     {
         $certificate->loadMissing('recipient', 'template');
 
-        $values = [
+        // Custom fields first, then the canonical fields overlay them. The
+        // canonical fields (dates, name, number) are the source of truth and
+        // must always win — a stray `data` key with the same slug (e.g. a raw
+        // Excel date serial captured by an older import) must never override
+        // the properly formatted column value.
+        $values = [];
+
+        foreach ($certificate->data ?? [] as $slug => $value) {
+            $values[$slug] = (string) $value;
+        }
+
+        $values = array_merge($values, [
             'full_name' => $certificate->recipient->full_name,
             'email' => $certificate->recipient->email,
             'completion_date' => $certificate->completion_date?->format('d M Y') ?? '',
             'issue_date' => $certificate->issue_date->format('d M Y'),
             'expiry_date' => $certificate->expiry_date?->format('d M Y') ?? '',
             'certificate_number' => $certificate->certificate_number,
-        ];
-
-        foreach ($certificate->data ?? [] as $slug => $value) {
-            $values[$slug] = (string) $value;
-        }
+        ]);
 
         return $values;
     }

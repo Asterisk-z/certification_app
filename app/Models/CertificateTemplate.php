@@ -34,7 +34,7 @@ class CertificateTemplate extends Model
         ['name' => 'QR Code', 'slug' => 'qr_code', 'type' => 'qrcode', 'font_size' => self::DEFAULT_BLOCK_FONT_SIZE, 'pos_y' => 600],
     ];
 
-    public const RESERVED_SLUGS = ['full_name', 'email', 'completion_date', 'issue_date', 'certificate_number', 'qr_code'];
+    public const RESERVED_SLUGS = ['full_name', 'email', 'completion_date', 'issue_date', 'expiry_date', 'certificate_number', 'qr_code'];
 
     protected $fillable = [
         'organization_id',
