@@ -19,6 +19,7 @@ const auth = useAuthStore();
                         <router-link :to="auth.isAdmin ? { name: 'admin.dashboard' } : { name: 'portal.dashboard' }"
                             class="rounded-lg bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
                             Dashboard
+                            {{ auth.isAdmin ? 'Admin' : 'Portal' }}
                         </router-link>
                     </template>
                     <router-link v-else :to="{ name: 'login' }"
