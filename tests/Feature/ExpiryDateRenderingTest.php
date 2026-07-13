@@ -42,10 +42,12 @@ class ExpiryDateRenderingTest extends TestCase
         $this->assertNotContains('expiry_date', ImportFormatExport::headingsFor($template));
     }
 
-    public function test_fix_command_restores_expiry_and_strips_leaked_data(): void
+    public function test_fix_command_backfills_expiry_from_template_and_strips_leaked_data(): void
     {
+        $template = CertificateTemplate::factory()->create(['duration' => 1, 'duration_type' => 'year']);
         $recipient = Recipient::factory()->create();
         $certificate = Certificate::factory()->create([
+            'certificate_template_id' => $template->id,
             'recipient_id' => $recipient->id,
             'issue_date' => '2026-06-18',
             'expiry_date' => null,
@@ -56,7 +58,9 @@ class ExpiryDateRenderingTest extends TestCase
         $this->artisan('certificates:fix-date-data')->assertSuccessful();
 
         $certificate->refresh();
-        $this->assertSame('18 Jun 2026', $certificate->expiry_date->format('d M Y'));
+        // Expiry comes from the template's validity period (issue + 1 year),
+        // not the bogus leaked serial (which decoded to the issue date).
+        $this->assertSame('18 Jun 2027', $certificate->expiry_date->format('d M Y'));
         $this->assertArrayNotHasKey('expiry_date', $certificate->data);
         $this->assertSame('Fire Safety', $certificate->data['course_title']);
         $this->assertNull($certificate->pdf_path);
