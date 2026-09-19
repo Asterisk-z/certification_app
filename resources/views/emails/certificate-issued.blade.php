@@ -33,5 +33,5 @@ Verify this credential
 </x-mail::button>
 
 Thanks,<br>
-{{ config('app.name') }}
+{{ config('mail.brand_name') }}
 </x-mail::message>

@@ -21,7 +21,7 @@ class RecipientInviteMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Access your certificates on '.config('app.name'),
+            subject: 'Access your certificates on '.config('mail.brand_name'),
         );
     }
 

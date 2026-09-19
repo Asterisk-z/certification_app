@@ -13,5 +13,5 @@ has been revoked and is no longer valid.
 If you believe this is a mistake, please contact the issuing administrator.
 
 Thanks,<br>
-{{ config('app.name') }}
+{{ config('mail.brand_name') }}
 </x-mail::message>

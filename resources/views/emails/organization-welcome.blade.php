@@ -1,7 +1,7 @@
 <x-mail::message>
 # Welcome, {{ $organization->name }}
 
-An account has been created for **{{ $organization->name }}** on **{{ config('app.name') }}**,
+An account has been created for **{{ $organization->name }}** on **{{ config('mail.brand_name') }}**,
 where you can design templates, manage recipients and issue credentials for your organization.
 
 Your login email is **{{ $organization->email }}**.
@@ -14,9 +14,9 @@ Sign in with the email above and the password provided by your administrator.
 @endif
 
 <x-mail::button :url="$loginUrl">
-Go to {{ config('app.name') }}
+Go to {{ config('mail.brand_name') }}
 </x-mail::button>
 
 Thanks,<br>
-{{ config('app.name') }}
+{{ config('mail.brand_name') }}
 </x-mail::message>

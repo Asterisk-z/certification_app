@@ -113,4 +113,17 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Email Brand Name
+    |--------------------------------------------------------------------------
+    |
+    | The product name shown inside outgoing emails (header, salutation,
+    | subjects, footer). Emails are branded CREDAVERO; the footer keeps a
+    | "Powered by HSE Board" line, which is the only HSE Board mention.
+    |
+    */
+
+    'brand_name' => env('MAIL_BRAND_NAME', 'CREDAVERO'),
+
 ];

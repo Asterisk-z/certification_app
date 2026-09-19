@@ -4,5 +4,5 @@
 {!! nl2br(e($newsletter->body)) !!}
 
 Thanks,<br>
-{{ config('app.name') }}
+{{ config('mail.brand_name') }}
 </x-mail::message>
