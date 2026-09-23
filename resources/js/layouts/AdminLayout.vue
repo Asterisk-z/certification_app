@@ -39,7 +39,7 @@ async function logout() {
             class="fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col bg-slate-900 transition-transform duration-200 lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
             <div class="flex h-16 items-center px-5">
-                <img src="/images/logo.png" alt="HSE Board" class="h-10 w-auto rounded-md bg-white px-1.5 py-1" />
+                <img src="/images/logo.png" alt="Credavero" class="h-10 w-auto rounded-md bg-white px-1.5 py-1" />
             </div>
             <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
                 <router-link v-for="item in nav" :key="item.label" :to="item.to"

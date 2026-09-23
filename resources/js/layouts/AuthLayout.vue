@@ -9,7 +9,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle.vue';
             <ThemeToggle />
         </div>
         <router-link to="/" class="mb-8">
-            <img src="/images/logo.png" alt="HSE Board" class="h-14 w-auto rounded-lg bg-white px-2 py-1.5" />
+            <img src="/images/logo.png" alt="Credavero" class="h-14 w-auto rounded-lg bg-white px-2 py-1.5" />
         </router-link>
         <div
             class="w-full max-w-md rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800 sm:p-8">

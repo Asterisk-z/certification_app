@@ -224,7 +224,7 @@ class OrganizationController extends Controller
         MailLog::create([
             'mailable_type' => OrganizationWelcomeMail::class,
             'recipient_email' => $organization->email,
-            'subject' => 'Welcome to '.config('app.name'),
+            'subject' => 'Welcome to '.config('mail.brand_name'),
             'status' => 'queued',
         ]);
     }

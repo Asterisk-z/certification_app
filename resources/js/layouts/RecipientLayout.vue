@@ -19,7 +19,7 @@ async function logout() {
         <header class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
                 <router-link :to="{ name: 'portal.dashboard' }" class="flex items-center">
-                    <img src="/images/logo.png" alt="HSE Board" class="h-9 w-auto rounded-md bg-white px-1.5 py-1" />
+                    <img src="/images/logo.png" alt="Credavero" class="h-9 w-auto rounded-md bg-white px-1.5 py-1" />
                 </router-link>
                 <nav class="flex items-center gap-1 text-sm font-medium sm:gap-3">
                     <ThemeToggle />

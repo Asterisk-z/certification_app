@@ -27,7 +27,7 @@ class RecipientInviteService
         MailLog::create([
             'mailable_type' => RecipientInviteMail::class,
             'recipient_email' => $recipient->email,
-            'subject' => 'Access your credentials on '.config('app.name'),
+            'subject' => 'Access your credentials on '.config('mail.brand_name'),
             'status' => 'queued',
         ]);
 
