@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Mail\RecipientInviteMail;
 use App\Models\Certificate;
+use App\Models\Organization;
 use App\Models\Recipient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,5 +144,36 @@ class PortalAndVerificationTest extends TestCase
         ])->assertOk()->assertJsonPath('user.name', 'New Name');
 
         $this->assertEquals('New Name', $user->fresh()->recipient->full_name);
+    }
+
+    public function test_verification_names_the_issuing_organization(): void
+    {
+        $organization = Organization::factory()->create(['name' => 'Acme Safety Institute Ltd.']);
+        $certificate = Certificate::factory()->sent()->create(['organization_id' => $organization->id]);
+
+        $this->getJson('/api/verify?number='.$certificate->certificate_number)
+            ->assertOk()
+            ->assertJsonPath('certificate.issuer', 'Acme Safety Institute Ltd.');
+    }
+
+    public function test_verification_falls_back_to_the_platform_for_admin_issued_credentials(): void
+    {
+        $certificate = Certificate::factory()->sent()->create(['organization_id' => null]);
+
+        $this->getJson('/api/verify?number='.$certificate->certificate_number)
+            ->assertOk()
+            ->assertJsonPath('certificate.issuer', config('app.name'));
+    }
+
+    public function test_verification_still_names_a_soft_deleted_issuer(): void
+    {
+        $organization = Organization::factory()->create(['name' => 'Gone Group']);
+        $certificate = Certificate::factory()->sent()->create(['organization_id' => $organization->id]);
+
+        $organization->delete();
+
+        $this->getJson('/api/verify?number='.$certificate->certificate_number)
+            ->assertOk()
+            ->assertJsonPath('certificate.issuer', 'Gone Group');
     }
 }

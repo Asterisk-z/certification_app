@@ -40,6 +40,27 @@ class Certificate extends Model
         'send_error',
     ];
 
+    protected static function booted(): void
+    {
+        // A certificate must carry its issuing organization: the CC list, the
+        // verification page's issuer and the org usage limits all key off it.
+        // The tenancy trait only fills it from an authenticated org user, which
+        // misses admin-run imports and anything created without a request, so
+        // fall back to the template that owns it and then to the recipient.
+        static::creating(function (self $certificate) {
+            if ($certificate->organization_id) {
+                return;
+            }
+
+            $certificate->organization_id = CertificateTemplate::withoutGlobalScopes()
+                ->whereKey($certificate->certificate_template_id)
+                ->value('organization_id')
+                ?? Recipient::withoutGlobalScopes()
+                    ->whereKey($certificate->recipient_id)
+                    ->value('organization_id');
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -98,6 +119,28 @@ class Certificate extends Model
     public function displayName(): ?string
     {
         return $this->title ?? $this->template?->name;
+    }
+
+    /**
+     * The issuing organization's name exactly as it was entered on the system,
+     * or null for platform/admin-issued credentials (organization_id is null),
+     * which callers attribute to the platform itself.
+     *
+     * Organizations soft-delete, so this deliberately looks through the trash:
+     * a credential must keep naming its real issuer after that organization
+     * leaves, rather than silently reattributing itself to the platform.
+     */
+    public function issuerName(): ?string
+    {
+        if (! $this->organization_id) {
+            return null;
+        }
+
+        $organization = $this->relationLoaded('organization')
+            ? $this->getRelation('organization')
+            : $this->organization()->withTrashed()->first();
+
+        return $organization?->name;
     }
 
     /**

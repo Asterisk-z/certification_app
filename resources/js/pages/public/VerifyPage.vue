@@ -90,6 +90,10 @@ onMounted(() => {
 
             <template v-if="certificate">
                 <dl class="mt-5 space-y-3 text-sm">
+                    <div v-if="certificate.issuer" class="flex items-start justify-between gap-4">
+                        <dt class="text-slate-500 dark:text-slate-400">Issued by</dt>
+                        <dd class="text-right font-semibold text-slate-900 dark:text-slate-100">{{ certificate.issuer }}</dd>
+                    </div>
                     <div class="flex items-start justify-between gap-4">
                         <dt class="text-slate-500 dark:text-slate-400">Credential number</dt>
                         <dd class="font-mono font-semibold text-slate-900 dark:text-slate-100">{{ certificate.number }}</dd>

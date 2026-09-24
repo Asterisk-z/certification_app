@@ -21,7 +21,6 @@ const file = ref(null);
 const fileInput = ref(null);
 const groupUuids = ref([]);
 const submitting = ref(false);
-const result = ref(null);
 const errorMessage = ref('');
 
 const canSubmit = computed(() =>
@@ -36,7 +35,6 @@ watch(
             text.value = '';
             file.value = null;
             groupUuids.value = props.fixedGroup ? [props.fixedGroup.uuid] : [];
-            result.value = null;
             errorMessage.value = '';
         }
     }
@@ -45,7 +43,6 @@ watch(
 async function submit() {
     submitting.value = true;
     errorMessage.value = '';
-    result.value = null;
     try {
         await ensureCsrf();
         const fd = new FormData();
@@ -59,9 +56,16 @@ async function submit() {
         const { data } = await http.post('/admin/recipients/bulk', fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
-        result.value = data;
-        ui.success(data.message);
+        // The summary message already names any skipped rows; raise it as an
+        // error toast so a partial import is not mistaken for a clean one.
+        if (data.failures?.length) {
+            ui.error(data.message);
+        } else {
+            ui.success(data.message);
+        }
+
         emit('done');
+        emit('close');
     } catch (e) {
         errorMessage.value = e.response?.data?.message || 'Bulk add failed.';
     } finally {
@@ -151,20 +155,6 @@ async function submit() {
                     <div v-if="errorMessage" class="rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-300">
                         {{ errorMessage }}
                     </div>
-
-                    <div v-if="result" class="space-y-2">
-                        <div class="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-                            {{ result.created }} added &amp; invited, {{ result.updated }} updated.
-                        </div>
-                        <div v-if="result.failures?.length" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
-                            <p class="font-semibold">{{ result.failures.length }} row(s) skipped:</p>
-                            <ul class="mt-1 list-inside list-disc space-y-0.5 text-xs">
-                                <li v-for="failure in result.failures" :key="failure.row">
-                                    Row {{ failure.row }}: {{ failure.errors.join('; ') }}
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="mt-5 flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
@@ -172,7 +162,7 @@ async function submit() {
                         class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/60"
                         @click="$emit('close')"
                     >
-                        {{ result ? 'Close' : 'Cancel' }}
+                        Cancel
                     </button>
                     <button
                         class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"

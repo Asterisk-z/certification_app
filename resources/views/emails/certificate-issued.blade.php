@@ -4,6 +4,7 @@
 You have been awarded the credential **{{ $certificate->displayName() ?? $certificate->certificate_number }}**.
 
 <x-mail::panel>
+**Issued by:** {{ $certificate->issuerName() ?? config('mail.brand_name') }}<br>
 **Awarded to:** {{ $certificate->recipient->full_name }}<br>
 **Credential number:** {{ $certificate->certificate_number }}<br>
 @if ($certificate->completion_date)

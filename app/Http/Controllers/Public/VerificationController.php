@@ -18,7 +18,12 @@ class VerificationController extends Controller
 
         $certificate = Certificate::withTrashed()
             ->where('certificate_number', trim($validated['number']))
-            ->with(['recipient:id,full_name', 'template:id,name,code'])
+            ->with([
+                'recipient:id,full_name',
+                'template:id,name,code',
+                // Trashed orgs included so a departed issuer is still named.
+                'organization' => fn ($query) => $query->withTrashed()->select('id', 'name'),
+            ])
             ->first();
 
         activity()->withProperties([
@@ -45,6 +50,7 @@ class VerificationController extends Controller
             'result' => $result,
             'certificate' => [
                 'number' => $certificate->certificate_number,
+                'issuer' => $certificate->issuerName() ?? config('app.name'),
                 'holder' => $certificate->recipient->full_name,
                 'template' => $certificate->displayName() ?? 'Certificate',
                 'issue_date' => $certificate->issue_date->format('Y-m-d'),

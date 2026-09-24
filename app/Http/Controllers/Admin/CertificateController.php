@@ -176,6 +176,7 @@ class CertificateController extends Controller
             // No template: register the credential as already issued (verifiable
             // immediately, no email). Typically paired with an uploaded file.
             $certificate = Certificate::create([
+                'organization_id' => $recipient->organization_id,
                 'certificate_template_id' => null,
                 'title' => $validated['title'],
                 'recipient_id' => $recipient->id,

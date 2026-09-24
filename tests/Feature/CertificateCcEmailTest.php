@@ -160,4 +160,67 @@ class CertificateCcEmailTest extends TestCase
 
         Mail::assertQueued(CertificateRevokedMail::class, fn ($mail) => $mail->hasCc('safety@org-a.test'));
     }
+
+    // --- the certificate must carry its issuing org for CC to resolve -------
+
+    public function test_certificate_created_from_a_template_inherits_the_orgs_id(): void
+    {
+        // The import paths create through the template relation. When a platform
+        // admin runs the import there is no org user to inherit from, so the org
+        // has to come from the template itself.
+        $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+
+        $template = CertificateTemplate::factory()->ready()->create(['organization_id' => $this->orgA->id]);
+        $recipient = Recipient::factory()->create(['organization_id' => $this->orgA->id]);
+
+        $certificate = $template->certificates()->create([
+            'recipient_id' => $recipient->id,
+            'certificate_number' => 'CC-INHERIT-1',
+            'issue_date' => now(),
+            'status' => CertificateStatus::Queued,
+        ]);
+
+        $this->assertEquals($this->orgA->id, $certificate->fresh()->organization_id);
+    }
+
+    public function test_issued_mail_copies_cc_for_an_admin_run_import(): void
+    {
+        Mail::fake();
+        $this->fakeRenderer();
+
+        CertificateCcEmail::factory()->create(['organization_id' => $this->orgA->id, 'email' => 'safety@org-a.test']);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+
+        $template = CertificateTemplate::factory()->ready()->create(['organization_id' => $this->orgA->id]);
+        $recipient = Recipient::factory()->create(['organization_id' => $this->orgA->id]);
+
+        $certificate = $template->certificates()->create([
+            'recipient_id' => $recipient->id,
+            'certificate_number' => 'CC-INHERIT-2',
+            'issue_date' => now(),
+            'status' => CertificateStatus::Queued,
+        ]);
+
+        (new SendCertificateJob($certificate->id))->handle(app(CertificateRenderService::class));
+
+        Mail::assertSent(CertificateIssuedMail::class, fn ($mail) => $mail->hasCc('safety@org-a.test'));
+    }
+
+    public function test_cc_resolves_while_an_org_user_is_authenticated(): void
+    {
+        // With QUEUE_CONNECTION=sync the job runs inside the org user's request,
+        // so the tenancy global scope is live during the CC lookup.
+        Mail::fake();
+        $this->fakeRenderer();
+
+        CertificateCcEmail::factory()->create(['organization_id' => $this->orgA->id, 'email' => 'safety@org-a.test']);
+        $certificate = $this->queuedCertificate($this->orgA);
+
+        $this->actingAs($this->orgUserA);
+
+        (new SendCertificateJob($certificate->id))->handle(app(CertificateRenderService::class));
+
+        Mail::assertSent(CertificateIssuedMail::class, fn ($mail) => $mail->hasCc('safety@org-a.test'));
+    }
 }

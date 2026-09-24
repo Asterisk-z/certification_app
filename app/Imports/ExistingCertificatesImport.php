@@ -105,6 +105,7 @@ class ExistingCertificatesImport implements ToCollection, WithHeadingRow
             }
 
             Certificate::create([
+                'organization_id' => $this->template?->organization_id ?? $recipient->organization_id,
                 'certificate_template_id' => $this->template?->id,
                 'title' => filled($data['certificate_title'] ?? null) ? trim((string) $data['certificate_title']) : null,
                 'recipient_id' => $recipient->id,

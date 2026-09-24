@@ -39,7 +39,11 @@ class CertificateCcEmail extends Model
         // Query by organization_id directly: this runs from the queue worker
         // (no auth user, so the tenant global scope is inert) as well as from
         // request context, and must resolve the same list either way.
-        $emails = static::query()
+        // The tenancy global scope is lifted explicitly: this runs from the
+        // queue worker (no auth user) and, on a sync queue, from inside an org
+        // user's request. The certificate's own org is the only input that may
+        // decide the list, so the answer cannot depend on who is logged in.
+        $emails = static::withoutGlobalScope(BelongsToOrganization::class)
             ->where('organization_id', $certificate->organization_id)
             ->pluck('email');
 

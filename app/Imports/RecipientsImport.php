@@ -90,6 +90,7 @@ class RecipientsImport implements ToCollection, WithHeadingRow
             }
 
             $this->template->certificates()->create([
+                'organization_id' => $this->template->organization_id,
                 'recipient_id' => $recipient->id,
                 'group_id' => $this->group?->id,
                 'certificate_number' => $this->numbers->next($this->template),
