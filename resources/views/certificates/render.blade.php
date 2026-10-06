@@ -12,9 +12,10 @@
         .block img, .block svg { width: 100%; height: 100%; object-fit: contain; }
     </style>
 </head>
-<body>
+{{-- No context menu or image drag when this is viewed in a browser (the public page and the portal preview frame it). --}}
+<body oncontextmenu="return false">
     @if ($backgroundData)
-        <img class="bg" src="{{ $backgroundData }}" alt="">
+        <img class="bg" src="{{ $backgroundData }}" alt="" draggable="false">
     @endif
 
     @foreach ($blocks as $block)

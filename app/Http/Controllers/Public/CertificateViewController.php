@@ -27,17 +27,23 @@ class CertificateViewController extends Controller
         // A manually uploaded file is the credential's real document — it is
         // what gets emailed and downloaded — so show it rather than a render
         // of the template it was filed under.
-        if ($certificate->uploaded_file_path && Storage::disk('local')->exists($certificate->uploaded_file_path)) {
-            return Storage::disk('local')->response(
-                $certificate->uploaded_file_path,
-                $certificate->certificate_number.'.pdf'
-            );
-        }
+        $uploaded = $certificate->uploaded_file_path && Storage::disk('local')->exists($certificate->uploaded_file_path);
 
         // Offline certificates without a template have nothing else to show.
-        abort_unless($certificate->certificate_template_id, 404, 'No viewable document for this credential.');
+        abort_unless($uploaded || $certificate->certificate_template_id, 404, 'No viewable document for this credential.');
 
-        return response($this->renderer->html($certificate));
+        // ?embed=1 is the bare document, framed by the page below and by the
+        // recipient portal's preview.
+        if (request()->boolean('embed')) {
+            return $uploaded
+                ? Storage::disk('local')->response($certificate->uploaded_file_path, $certificate->certificate_number.'.pdf')
+                : response($this->renderer->html($certificate));
+        }
+
+        return response()->view('certificates.view', [
+            'certificate' => $certificate,
+            'uploaded' => $uploaded,
+        ]);
     }
 
     public function download(string $uuid): StreamedResponse|JsonResponse

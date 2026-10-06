@@ -155,18 +155,46 @@ class PortalAndVerificationTest extends TestCase
         Storage::disk('local')->put($path, '%PDF-1.4 uploaded');
         $certificate->forceFill(['uploaded_file_path' => $path])->save();
 
-        $response = $this->get('/c/'.$certificate->uuid)->assertOk();
+        $response = $this->get('/c/'.$certificate->uuid.'?embed=1')->assertOk();
 
         $this->assertSame('%PDF-1.4 uploaded', $response->streamedContent());
+
+        // An uploaded credential only exists as its PDF.
+        $this->get('/c/'.$certificate->uuid)
+            ->assertOk()
+            ->assertSee('Download PDF')
+            ->assertDontSee('Download PNG');
     }
 
     public function test_public_view_renders_the_template_when_nothing_was_uploaded(): void
     {
         $certificate = Certificate::factory()->sent()->create();
 
+        $this->get('/c/'.$certificate->uuid.'?embed=1')
+            ->assertOk()
+            ->assertSee('<title>'.$certificate->certificate_number.'</title>', false)
+            ->assertSee('oncontextmenu="return false"', false)
+            ->assertDontSee('Download PDF');
+    }
+
+    public function test_public_view_offers_pdf_and_png_downloads_and_blocks_the_context_menu(): void
+    {
+        $certificate = Certificate::factory()->sent()->create();
+        $download = url('/c/'.$certificate->uuid.'/download');
+
         $this->get('/c/'.$certificate->uuid)
             ->assertOk()
-            ->assertSee('<title>'.$certificate->certificate_number.'</title>', false);
+            ->assertSee('href="'.$download.'?format=pdf"', false)
+            ->assertSee('href="'.$download.'?format=png"', false)
+            ->assertSee('src="'.url('/c/'.$certificate->uuid).'?embed=1"', false)
+            ->assertSee("addEventListener('contextmenu'", false);
+    }
+
+    public function test_public_view_is_not_found_without_a_template_or_an_uploaded_file(): void
+    {
+        $certificate = Certificate::factory()->sent()->create(['certificate_template_id' => null, 'title' => 'Offline']);
+
+        $this->get('/c/'.$certificate->uuid)->assertNotFound();
     }
 
     public function test_recipient_cannot_access_admin_api(): void

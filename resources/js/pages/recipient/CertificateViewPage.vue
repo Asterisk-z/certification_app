@@ -54,7 +54,7 @@ function download(format = 'pdf') {
         <!-- Live certificate preview -->
         <div class="mt-6 overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
             <iframe
-                :src="`/c/${certificate.uuid}`"
+                :src="`/c/${certificate.uuid}?embed=1`"
                 class="aspect-[1123/794] w-full"
                 title="Credential preview"
             />
