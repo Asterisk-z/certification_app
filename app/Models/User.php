@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -46,6 +47,24 @@ class User extends Authenticatable
     public function recipient(): HasOne
     {
         return $this->hasOne(Recipient::class);
+    }
+
+    /**
+     * Ids of every recipient record that is this person. Each organization
+     * keeps its own record per email and only the one whose invite was
+     * accepted is linked through user_id, so the rest are matched on the
+     * account's email (a recipient account only exists once its emailed
+     * invite link has been followed, which proves the address).
+     *
+     * @return Collection<int, int>
+     */
+    public function recipientIds(): Collection
+    {
+        return Recipient::query()
+            ->where(fn ($query) => $query
+                ->where('user_id', $this->id)
+                ->orWhereRaw('LOWER(email) = ?', [mb_strtolower($this->email)]))
+            ->pluck('id');
     }
 
     public function templates(): HasMany

@@ -10,6 +10,7 @@ use App\Models\Recipient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -111,6 +112,61 @@ class PortalAndVerificationTest extends TestCase
             ->getJson('/api/me/certificates')
             ->assertOk()
             ->assertJsonPath('total', 1);
+    }
+
+    public function test_recipient_sees_certificates_from_every_organization_that_issued_to_their_email(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::Recipient, 'email' => 'holder@example.com']);
+
+        // The account came from the first organization's invite. The second
+        // organization keeps its own record for the same person, which no
+        // invite has linked to the account.
+        $linked = Recipient::factory()->create([
+            'organization_id' => Organization::factory(),
+            'user_id' => $user->id,
+            'email' => 'holder@example.com',
+        ]);
+        $unlinked = Recipient::factory()->create([
+            'organization_id' => Organization::factory(),
+            'email' => 'Holder@Example.com',
+        ]);
+
+        Certificate::factory()->sent()->create(['recipient_id' => $linked->id]);
+        $second = Certificate::factory()->sent()->create(['recipient_id' => $unlinked->id]);
+        Certificate::factory()->sent()->create(); // someone else's
+
+        $this->actingAs($user)
+            ->getJson('/api/me/certificates')
+            ->assertOk()
+            ->assertJsonPath('total', 2);
+
+        $this->actingAs($user)
+            ->getJson("/api/me/certificates/{$second->uuid}")
+            ->assertOk()
+            ->assertJsonPath('uuid', $second->uuid);
+    }
+
+    public function test_public_view_shows_the_uploaded_file_instead_of_the_template_render(): void
+    {
+        Storage::fake('local');
+        $certificate = Certificate::factory()->sent()->create(); // issued from a template
+
+        $path = "certificates/uploads/{$certificate->uuid}-manual.pdf";
+        Storage::disk('local')->put($path, '%PDF-1.4 uploaded');
+        $certificate->forceFill(['uploaded_file_path' => $path])->save();
+
+        $response = $this->get('/c/'.$certificate->uuid)->assertOk();
+
+        $this->assertSame('%PDF-1.4 uploaded', $response->streamedContent());
+    }
+
+    public function test_public_view_renders_the_template_when_nothing_was_uploaded(): void
+    {
+        $certificate = Certificate::factory()->sent()->create();
+
+        $this->get('/c/'.$certificate->uuid)
+            ->assertOk()
+            ->assertSee('<title>'.$certificate->certificate_number.'</title>', false);
     }
 
     public function test_recipient_cannot_access_admin_api(): void

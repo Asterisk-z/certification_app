@@ -64,20 +64,10 @@ class CertificateRenderService
         $absolute = Storage::disk('local')->path($path);
         Storage::disk('local')->makeDirectory('certificates');
 
-        $shot = Browsershot::html($this->html($certificate))
-            ->noSandbox()
-            // Containers ship a tiny /dev/shm; without this Chromium can crash.
-            ->addChromiumArguments(['disable-dev-shm-usage'])
-            ->showBackground()
+        $this->browsershot($certificate)
             ->paperSize($this->pxToMm($template->bg_width), $this->pxToMm($template->bg_height))
             ->margins(0, 0, 0, 0)
-            ->timeout(120);
-
-        if ($chrome = config('services.chrome.path')) {
-            $shot->setChromePath($chrome);
-        }
-
-        $shot->savePdf($absolute);
+            ->savePdf($absolute);
 
         $certificate->forceFill(['pdf_path' => $path])->save();
 
@@ -99,22 +89,39 @@ class CertificateRenderService
         $absolute = Storage::disk('local')->path($path);
         Storage::disk('local')->makeDirectory('certificates');
 
+        $this->browsershot($certificate)
+            ->windowSize($template->bg_width, $template->bg_height)
+            ->save($absolute);
+
+        $certificate->forceFill(['png_path' => $path])->save();
+
+        return $path;
+    }
+
+    /**
+     * A Browsershot instance for this certificate's HTML, configured the same
+     * way for every output format.
+     */
+    private function browsershot(Certificate $certificate): Browsershot
+    {
         $shot = Browsershot::html($this->html($certificate))
             ->noSandbox()
+            // Chrome 132+ only ships the new headless mode; Browsershot still
+            // defaults to the removed "shell" mode.
+            ->newHeadless()
+            // Containers ship a tiny /dev/shm; without this Chromium can crash.
             ->addChromiumArguments(['disable-dev-shm-usage'])
             ->showBackground()
-            ->windowSize($template->bg_width, $template->bg_height)
-            ->timeout(120);
+            ->timeout(120)
+            // Our wrapper around Browsershot's script caps how long it waits for
+            // Chrome to exit (see resources/node/browsershot.cjs).
+            ->setBinPath(base_path('resources/node/browsershot.cjs'));
 
         if ($chrome = config('services.chrome.path')) {
             $shot->setChromePath($chrome);
         }
 
-        $shot->save($absolute);
-
-        $certificate->forceFill(['png_path' => $path])->save();
-
-        return $path;
+        return $shot;
     }
 
     /**

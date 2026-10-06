@@ -20,13 +20,7 @@ class PortalController extends Controller
      */
     public function certificates(Request $request): JsonResponse
     {
-        $recipient = $request->user()->recipient;
-
-        if (! $recipient) {
-            return response()->json(['data' => [], 'total' => 0]);
-        }
-
-        $query = Certificate::where('recipient_id', $recipient->id)
+        $query = Certificate::whereIn('recipient_id', $request->user()->recipientIds())
             ->whereIn('status', [CertificateStatus::Sent, CertificateStatus::Expired, CertificateStatus::Revoked, CertificateStatus::Renewed])
             ->with('template:id,uuid,name,code,background_image')
             ->latest('issue_date');
@@ -86,11 +80,8 @@ class PortalController extends Controller
 
     private function ownCertificate(Request $request, string $uuid): Certificate
     {
-        $recipient = $request->user()->recipient;
-        abort_unless($recipient, 404);
-
         return Certificate::where('uuid', $uuid)
-            ->where('recipient_id', $recipient->id)
+            ->whereIn('recipient_id', $request->user()->recipientIds())
             ->whereIn('status', [CertificateStatus::Sent, CertificateStatus::Expired, CertificateStatus::Revoked, CertificateStatus::Renewed])
             ->firstOrFail();
     }

@@ -169,6 +169,9 @@ class CertificateLifecycleTest extends TestCase
 
     public function test_renew_creates_new_certificate_with_same_data(): void
     {
+        // The factory's completion date is relative to today; pin the clock so
+        // it stays before the fixed issue dates below.
+        $this->travelTo('2026-06-15');
         Queue::fake();
         $certificate = Certificate::factory()->expired()->create([
             'certificate_template_id' => $this->template->id,
@@ -188,6 +191,7 @@ class CertificateLifecycleTest extends TestCase
 
     public function test_renew_accepts_custom_validity_date(): void
     {
+        $this->travelTo('2026-06-15');
         Queue::fake();
         $certificate = Certificate::factory()->expired()->create(['certificate_template_id' => $this->template->id]);
 
@@ -222,6 +226,7 @@ class CertificateLifecycleTest extends TestCase
 
     public function test_renewed_credential_regenerates_from_template(): void
     {
+        $this->travelTo('2026-06-15');
         Queue::fake();
         $certificate = Certificate::factory()->expired()->create([
             'certificate_template_id' => $this->template->id,

@@ -24,19 +24,18 @@ class CertificateViewController extends Controller
             $certificate->forceFill(['first_seen_at' => now()])->save();
         }
 
-        // Offline certificates without a template: show the uploaded file.
-        if (! $certificate->certificate_template_id) {
-            abort_unless(
-                $certificate->uploaded_file_path && Storage::disk('local')->exists($certificate->uploaded_file_path),
-                404,
-                'No viewable document for this credential.'
-            );
-
+        // A manually uploaded file is the credential's real document — it is
+        // what gets emailed and downloaded — so show it rather than a render
+        // of the template it was filed under.
+        if ($certificate->uploaded_file_path && Storage::disk('local')->exists($certificate->uploaded_file_path)) {
             return Storage::disk('local')->response(
                 $certificate->uploaded_file_path,
                 $certificate->certificate_number.'.pdf'
             );
         }
+
+        // Offline certificates without a template have nothing else to show.
+        abort_unless($certificate->certificate_template_id, 404, 'No viewable document for this credential.');
 
         return response($this->renderer->html($certificate));
     }

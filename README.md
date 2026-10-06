@@ -76,7 +76,7 @@ php artisan key:generate
 php artisan migrate --seed       # seeds admin@hseboard.com / password
 php artisan storage:link
 
-# run all three in separate terminals:
+# run all three in separate terminals (or `composer run dev` to start them together):
 php artisan serve
 php artisan queue:work --queue=emails,default
 npm run dev
