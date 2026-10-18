@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Concerns\FiltersByOrganization;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Organization;
 use App\Models\Recipient;
 use App\Services\OrganizationLimitService;
 use App\Services\RecipientInviteService;
+use App\Services\RecipientListFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,54 +17,19 @@ use Illuminate\Validation\Rule;
 
 class RecipientController extends Controller
 {
-    use FiltersByOrganization;
-
     public function __construct(private readonly RecipientInviteService $invites) {}
 
     /** Column sorts the listing accepts (?sort=…&dir=asc|desc). */
     private const SORTS = ['created', 'name', 'email', 'organization', 'groups', 'certificates', 'portal'];
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, RecipientListFilter $filter): JsonResponse
     {
         $query = Recipient::query()
             ->withCount(['certificates', 'groups'])
             ->with(['groups:id,uuid,name', 'organization:id,uuid,name']);
 
-        if ($search = trim((string) $request->query('q'))) {
-            $like = $this->like($search);
-            $query->where(fn ($q) => $q->where('full_name', 'like', $like)->orWhere('email', 'like', $like));
-        }
-
-        // Per-column filters.
-        if ($name = trim((string) $request->query('name'))) {
-            $query->where('full_name', 'like', $this->like($name));
-        }
-
-        if ($email = trim((string) $request->query('email'))) {
-            $query->where('email', 'like', $this->like($email));
-        }
-
-        if ($request->user()->isAdmin() && ($orgName = trim((string) $request->query('organization_name')))) {
-            $query->whereHas('organization', fn ($q) => $q->where('name', 'like', $this->like($orgName)));
-        }
-
-        if ($groupUuid = $request->query('group')) {
-            $query->whereHas('groups', fn ($q) => $q->where('uuid', $groupUuid));
-        }
-
-        match ($request->query('certificates')) {
-            'none' => $query->whereDoesntHave('certificates'),
-            'some' => $query->whereHas('certificates'),
-            default => null,
-        };
-
-        match ($request->query('portal')) {
-            'active' => $query->whereNotNull('user_id'),
-            'not_invited' => $query->whereNull('user_id'),
-            default => null,
-        };
-
-        $this->applyOrganizationFilter($query, $request);
+        // Same filters the bulk "select all matching" action uses.
+        $filter->apply($query, $request->query(), $request->user());
         $this->applySort($query, $request);
 
         return response()->json($query->paginate((int) $request->query('per_page', 15)));
@@ -90,11 +55,6 @@ class RecipientController extends Controller
         };
 
         $query->orderBy('recipients.id', 'desc');
-    }
-
-    private function like(string $value): string
-    {
-        return '%'.str_replace(['%', '_'], ['\\%', '\\_'], $value).'%';
     }
 
     public function store(Request $request, OrganizationLimitService $limits): JsonResponse

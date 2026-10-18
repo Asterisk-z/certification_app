@@ -50,6 +50,41 @@ class RecipientBulkActionTest extends TestCase
         $this->assertEquals(3, Recipient::withTrashed()->count());
     }
 
+    public function test_bulk_action_on_all_matching_filters_spans_every_page(): void
+    {
+        Mail::fake();
+        Recipient::factory()->count(3)->sequence(
+            ['full_name' => 'Zed One'], ['full_name' => 'Zed Two'], ['full_name' => 'Zed Three'],
+        )->create();
+        Recipient::factory()->count(2)->create(['full_name' => 'Someone Else']);
+
+        $this->actingAs($this->admin)->postJson('/api/admin/recipients/bulk-action', [
+            'action' => 'invite',
+            'all' => true,
+            'filters' => ['name' => 'zed', 'portal' => 'not_invited'],
+        ])->assertOk()->assertJsonPath('affected', 3);
+
+        Mail::assertSent(RecipientInviteMail::class, 3);
+
+        // Deleting "all matching" removes only the filtered set, even without a uuid list.
+        $this->actingAs($this->admin)->postJson('/api/admin/recipients/bulk-action', [
+            'action' => 'delete',
+            'all' => true,
+            'filters' => ['name' => 'zed'],
+        ])->assertOk()->assertJsonPath('affected', 3);
+
+        $this->assertEquals(2, Recipient::count());
+        $this->assertSame(['Someone Else', 'Someone Else'], Recipient::pluck('full_name')->all());
+    }
+
+    public function test_bulk_action_without_all_still_requires_uuids(): void
+    {
+        $this->actingAs($this->admin)->postJson('/api/admin/recipients/bulk-action', [
+            'action' => 'delete',
+            'filters' => ['name' => 'zed'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('uuids');
+    }
+
     public function test_bulk_action_validates_action_and_uuids(): void
     {
         $this->actingAs($this->admin)->postJson('/api/admin/recipients/bulk-action', [

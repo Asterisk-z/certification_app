@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRecipientsStore, useGroupsStore } from '@/stores/recipients';
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
@@ -141,8 +141,13 @@ async function confirmDelete() {
     }
 }
 
+// Unticking any row drops the "all matching" selection back to the page.
+watch(() => store.selected.length, () => {
+    if (!store.allSelected) store.selectAll = false;
+});
+
 function bulk(action) {
-    const count = store.selected.length;
+    const count = store.selectionCount;
     const labels = {
         invite: {
             title: 'Send invites?',
@@ -247,12 +252,29 @@ function bulk(action) {
             v-if="store.selected.length"
             class="sticky top-2 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm text-white shadow-lg dark:bg-slate-800"
         >
-            <span class="font-medium">{{ store.selected.length }} selected</span>
+            <span class="font-medium">{{ store.selectionCount }} selected</span>
             <span class="hidden text-slate-400 sm:inline">·</span>
             <button class="rounded-lg bg-emerald-600 px-3 py-1.5 font-medium hover:bg-emerald-500" @click="bulk('invite')">Invite</button>
             <button class="rounded-lg bg-rose-600 px-3 py-1.5 font-medium hover:bg-rose-500" @click="bulk('delete')">Delete</button>
-            <button class="ml-auto text-slate-300 hover:text-white" @click="store.selected = []">Clear</button>
+            <button class="ml-auto text-slate-300 hover:text-white" @click="store.clearSelection()">Clear</button>
         </div>
+
+        <!-- Widen a full-page selection to every recipient matching the filters -->
+        <p
+            v-if="store.allSelected && store.meta && store.meta.total > store.items.length"
+            class="mt-2 rounded-xl bg-brand-50 px-4 py-2 text-center text-sm text-brand-900 dark:bg-brand-900/30 dark:text-brand-200"
+        >
+            <template v-if="store.selectAll">
+                All <strong>{{ store.meta.total }}</strong> recipients matching {{ hasFilters ? 'the current filters' : 'this list' }} are selected.
+                <button type="button" class="ml-1 font-semibold underline hover:no-underline" @click="store.clearSelection()">Clear selection</button>
+            </template>
+            <template v-else>
+                All {{ store.items.length }} recipients on this page are selected.
+                <button type="button" class="ml-1 font-semibold underline hover:no-underline" @click="store.selectAllMatching()">
+                    Select all {{ store.meta.total }} matching {{ hasFilters ? 'the current filters' : 'recipients' }}
+                </button>
+            </template>
+        </p>
 
         <!-- Desktop table -->
         <div class="mt-4 hidden overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 md:block">

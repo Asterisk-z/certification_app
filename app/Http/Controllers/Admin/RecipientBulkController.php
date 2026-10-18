@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\Recipient;
 use App\Services\OrganizationLimitService;
 use App\Services\RecipientInviteService;
+use App\Services\RecipientListFilter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -114,27 +115,38 @@ class RecipientBulkController extends Controller
     }
 
     /**
-     * Apply a bulk action (invite / delete) to selected recipients.
+     * Apply a bulk action (invite / delete) to selected recipients — either an
+     * explicit list of uuids, or (`all: true`) every recipient matching the
+     * listing filters the admin currently has applied.
      */
-    public function action(Request $request, RecipientInviteService $invites): JsonResponse
+    public function action(Request $request, RecipientInviteService $invites, RecipientListFilter $filter): JsonResponse
     {
         $validated = $request->validate([
             'action' => ['required', Rule::in(['invite', 'delete'])],
-            'uuids' => ['required', 'array', 'min:1', 'max:500'],
+            'all' => ['sometimes', 'boolean'],
+            'filters' => ['sometimes', 'array'],
+            'filters.*' => ['nullable', 'string', 'max:255'],
+            'uuids' => ['required_unless:all,true', 'array', 'min:1', 'max:500'],
             'uuids.*' => ['uuid'],
         ]);
 
-        $recipients = Recipient::whereIn('uuid', $validated['uuids'])->get();
+        $query = ($validated['all'] ?? false)
+            ? $filter->apply(Recipient::query(), $validated['filters'] ?? [], $request->user())
+            : Recipient::whereIn('uuid', $validated['uuids']);
+
         $affected = 0;
 
-        foreach ($recipients as $recipient) {
-            if ($validated['action'] === 'invite') {
-                $invites->send($recipient, $request->user());
-            } else {
-                $recipient->delete();
+        // chunkById keeps "delete all matching" correct while rows disappear.
+        $query->chunkById(200, function ($recipients) use ($validated, $invites, $request, &$affected) {
+            foreach ($recipients as $recipient) {
+                if ($validated['action'] === 'invite') {
+                    $invites->send($recipient, $request->user());
+                } else {
+                    $recipient->delete();
+                }
+                $affected++;
             }
-            $affected++;
-        }
+        });
 
         activity()->causedBy($request->user())
             ->withProperties(['action' => $validated['action'], 'affected' => $affected])
