@@ -39,6 +39,11 @@ class SendCertificateJob implements ShouldQueue
             return;
         }
 
+        // One mail_logs row follows the whole send cycle (every attempt, the
+        // queue's own retries and the mail:retry-pending schedule included).
+        $log = $this->mailLog($certificate);
+        $log->markSending();
+
         // Generate the PDF + PNG unless an admin manually uploaded the file.
         if (! $certificate->uploaded_file_path) {
             $renderer->pdf($certificate);
@@ -59,14 +64,7 @@ class SendCertificateJob implements ShouldQueue
             'send_error' => null,
         ])->save();
 
-        MailLog::create([
-            'mailable_type' => CertificateIssuedMail::class,
-            'certificate_id' => $certificate->id,
-            'recipient_email' => $certificate->recipient->email,
-            'subject' => 'Your credential '.$certificate->certificate_number,
-            'status' => 'sent',
-            'sent_at' => now(),
-        ]);
+        $log->markSent();
 
         activity()->performedOn($certificate)->log('certificate_sent');
 
@@ -86,15 +84,13 @@ class SendCertificateJob implements ShouldQueue
             'send_error' => mb_strimwidth($exception?->getMessage() ?? 'Unknown error', 0, 1000, '…'),
         ])->save();
 
-        MailLog::create([
-            'mailable_type' => CertificateIssuedMail::class,
-            'certificate_id' => $certificate->id,
-            'recipient_email' => $certificate->recipient->email,
-            'subject' => 'Your credential '.$certificate->certificate_number,
-            'status' => 'failed',
-            'error' => $exception?->getMessage(),
-        ]);
+        $this->mailLog($certificate)->markFailed($exception);
 
         activity()->performedOn($certificate)->log('certificate_send_failed');
+    }
+
+    private function mailLog(Certificate $certificate): MailLog
+    {
+        return MailLog::openFor($certificate, CertificateIssuedMail::class, 'Your credential '.$certificate->certificate_number);
     }
 }

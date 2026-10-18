@@ -48,7 +48,7 @@ class NotificationsAndNewsletterTest extends TestCase
 
         (new SendNewsletterJob($newsletter->id))->handle();
 
-        Mail::assertQueued(NewsletterMail::class, 3);
+        Mail::assertSent(NewsletterMail::class, 3);
         $this->assertEquals(3, $newsletter->fresh()->recipients_count);
         $this->assertNotNull($newsletter->fresh()->sent_at);
         $this->assertEquals(3, MailLog::where('mailable_type', NewsletterMail::class)->count());

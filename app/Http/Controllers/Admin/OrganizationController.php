@@ -9,13 +9,12 @@ use App\Mail\OrganizationWelcomeMail;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Group;
-use App\Models\MailLog;
 use App\Models\Organization;
 use App\Models\Recipient;
 use App\Models\User;
+use App\Services\LoggedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -219,14 +218,10 @@ class OrganizationController extends Controller
     {
         $loginUrl = rtrim(config('app.url'), '/').'/login';
 
-        Mail::to($organization->email)->queue(new OrganizationWelcomeMail($organization, $loginUrl, $setupLinkSent));
-
-        MailLog::create([
-            'mailable_type' => OrganizationWelcomeMail::class,
-            'recipient_email' => $organization->email,
-            'subject' => 'Welcome to '.config('mail.brand_name'),
-            'status' => 'queued',
-        ]);
+        app(LoggedMailer::class)->queue(
+            new OrganizationWelcomeMail($organization, $loginUrl, $setupLinkSent),
+            $organization->email,
+        );
     }
 
     private function validateOrganization(Request $request, ?Organization $organization = null): array

@@ -71,7 +71,7 @@ class PortalAndVerificationTest extends TestCase
             ->postJson("/api/admin/recipients/{$recipient->uuid}/invite")
             ->assertOk();
 
-        Mail::assertQueued(RecipientInviteMail::class);
+        Mail::assertSent(RecipientInviteMail::class);
 
         // Recipient follows the signed link and sets a password.
         $signed = URL::temporarySignedRoute('invite.show', now()->addDays(7), ['recipient' => $recipient->uuid]);

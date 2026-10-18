@@ -126,7 +126,9 @@ so Caddy proxies to it by container name. Logs:
    (QR verification links use it) and SMTP credentials.
 3. Run a supervised queue worker: `php artisan queue:work --queue=emails,default --tries=3`.
 4. Add the scheduler cron: `* * * * * php artisan schedule:run` (daily expiry job +
-   expiring-soon notifications run at 00:30).
+   expiring-soon notifications run at 00:30; `mail:retry-pending` re-sends queued or
+   failed mail from `/admin/logs/mail` every 5 minutes, tunable via `MAIL_RETRY_*`
+   in `config/mail.php`).
 5. Install Chrome/Chromium on the host and set `CHROME_PATH`
    (`npm install puppeteer` is done with `PUPPETEER_SKIP_DOWNLOAD=true`; the
    bundled-browser route also works if you drop that env var).

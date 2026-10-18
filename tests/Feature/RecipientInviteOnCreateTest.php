@@ -31,7 +31,7 @@ class RecipientInviteOnCreateTest extends TestCase
             'email' => 'jane@example.com',
         ])->assertCreated();
 
-        Mail::assertQueued(RecipientInviteMail::class, 1);
+        Mail::assertSent(RecipientInviteMail::class, 1);
         $this->assertDatabaseHas('mail_logs', [
             'recipient_email' => 'jane@example.com',
             'mailable_type' => RecipientInviteMail::class,
@@ -51,7 +51,7 @@ class RecipientInviteOnCreateTest extends TestCase
             ->assertJsonPath('updated', 1);
 
         // Only the two new recipients are invited; the existing one is not.
-        Mail::assertQueued(RecipientInviteMail::class, 2);
+        Mail::assertSent(RecipientInviteMail::class, 2);
         Mail::assertNotQueued(function (RecipientInviteMail $mail) {
             return $mail->recipient->email === 'jane@example.com';
         });

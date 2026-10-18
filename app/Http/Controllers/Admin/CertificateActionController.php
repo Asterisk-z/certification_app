@@ -8,13 +8,12 @@ use App\Jobs\SendCertificateJob;
 use App\Mail\CertificateRevokedMail;
 use App\Models\Certificate;
 use App\Models\CertificateCcEmail;
-use App\Models\MailLog;
 use App\Notifications\CertificateRevokedNotification;
 use App\Services\CertificateIssueService;
+use App\Services\LoggedMailer;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class CertificateActionController extends Controller
@@ -208,22 +207,13 @@ class CertificateActionController extends Controller
 
     private function notifyRevocation(Certificate $certificate, ?string $reason): void
     {
-        $mailer = Mail::to($certificate->recipient->email);
-
-        if ($cc = CertificateCcEmail::recipientsFor($certificate)) {
-            $mailer->cc($cc);
-        }
-
-        $mailer->queue(new CertificateRevokedMail($certificate, $reason));
+        app(LoggedMailer::class)->queue(
+            new CertificateRevokedMail($certificate, $reason),
+            $certificate->recipient->email,
+            CertificateCcEmail::recipientsFor($certificate),
+            $certificate->id,
+        );
 
         $certificate->recipient->user?->notify(new CertificateRevokedNotification($certificate));
-
-        MailLog::create([
-            'mailable_type' => CertificateRevokedMail::class,
-            'certificate_id' => $certificate->id,
-            'recipient_email' => $certificate->recipient->email,
-            'subject' => 'Credential '.$certificate->certificate_number.' has been revoked',
-            'status' => 'queued',
-        ]);
     }
 }

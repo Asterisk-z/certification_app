@@ -33,7 +33,7 @@ class RecipientBulkActionTest extends TestCase
             'uuids' => $recipients->pluck('uuid')->all(),
         ])->assertOk()->assertJsonPath('affected', 3);
 
-        Mail::assertQueued(RecipientInviteMail::class, 3);
+        Mail::assertSent(RecipientInviteMail::class, 3);
         $this->assertEquals(3, MailLog::where('mailable_type', RecipientInviteMail::class)->count());
     }
 

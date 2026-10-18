@@ -158,7 +158,7 @@ class CertificateCcEmailTest extends TestCase
             ->postJson("/api/org/certificates/{$certificate->uuid}/revoke", ['reason' => 'Issued in error'])
             ->assertOk();
 
-        Mail::assertQueued(CertificateRevokedMail::class, fn ($mail) => $mail->hasCc('safety@org-a.test'));
+        Mail::assertSent(CertificateRevokedMail::class, fn ($mail) => $mail->hasCc('safety@org-a.test'));
     }
 
     // --- the certificate must carry its issuing org for CC to resolve -------

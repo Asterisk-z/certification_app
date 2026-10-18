@@ -55,7 +55,7 @@ class OrganizationManagementTest extends TestCase
         $this->assertTrue(Hash::check('secret-password', $user->password));
 
         // A welcome mail goes out even when no setup link is involved.
-        Mail::assertQueued(
+        Mail::assertSent(
             OrganizationWelcomeMail::class,
             fn (OrganizationWelcomeMail $mail) => $mail->hasTo('ops@acme.test') && ! $mail->setupLinkSent,
         );
@@ -80,7 +80,7 @@ class OrganizationManagementTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class);
 
         // The welcome mail is sent here too, flagged that a setup link follows.
-        Mail::assertQueued(
+        Mail::assertSent(
             OrganizationWelcomeMail::class,
             fn (OrganizationWelcomeMail $mail) => $mail->hasTo('admin@beta.test') && $mail->setupLinkSent,
         );

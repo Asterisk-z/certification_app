@@ -126,4 +126,23 @@ return [
 
     'brand_name' => env('MAIL_BRAND_NAME', 'CREDAVERO'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Retry Schedule
+    |--------------------------------------------------------------------------
+    |
+    | `mail:retry-pending` runs every five minutes and re-dispatches mail_logs
+    | rows that are still queued or failed. A row is retried only after the
+    | cooldown has passed since its last attempt, up to max_attempts in total.
+    | A row stuck in `sending` for longer than stale_after_minutes is treated
+    | as a worker that died mid-send and is retried as well.
+    |
+    */
+
+    'retry' => [
+        'max_attempts' => (int) env('MAIL_RETRY_MAX_ATTEMPTS', 5),
+        'cooldown_minutes' => (int) env('MAIL_RETRY_COOLDOWN_MINUTES', 5),
+        'stale_after_minutes' => (int) env('MAIL_RETRY_STALE_AFTER_MINUTES', 15),
+    ],
+
 ];

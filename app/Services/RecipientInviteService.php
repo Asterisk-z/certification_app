@@ -3,10 +3,8 @@
 namespace App\Services;
 
 use App\Mail\RecipientInviteMail;
-use App\Models\MailLog;
 use App\Models\Recipient;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 
 class RecipientInviteService
@@ -22,14 +20,7 @@ class RecipientInviteService
         $signed = URL::temporarySignedRoute('invite.show', now()->addDays(7), ['recipient' => $recipient->uuid]);
         $inviteUrl = str_replace('/api/auth/invite/', '/invite/', $signed);
 
-        Mail::to($recipient->email)->queue(new RecipientInviteMail($recipient, $inviteUrl));
-
-        MailLog::create([
-            'mailable_type' => RecipientInviteMail::class,
-            'recipient_email' => $recipient->email,
-            'subject' => 'Access your credentials on '.config('mail.brand_name'),
-            'status' => 'queued',
-        ]);
+        app(LoggedMailer::class)->queue(new RecipientInviteMail($recipient, $inviteUrl), $recipient->email);
 
         $recipient->user?->forceFill(['invited_at' => now()])->save();
 

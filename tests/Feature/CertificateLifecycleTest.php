@@ -159,7 +159,7 @@ class CertificateLifecycleTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'revoked');
 
-        Mail::assertQueued(CertificateRevokedMail::class);
+        Mail::assertSent(CertificateRevokedMail::class);
 
         $this->actingAs($this->admin)
             ->postJson("/api/admin/certificates/{$certificate->uuid}/unrevoke")

@@ -4,17 +4,16 @@ namespace App\Jobs;
 
 use App\Enums\UserRole;
 use App\Mail\NewsletterMail;
-use App\Models\MailLog;
 use App\Models\Newsletter;
 use App\Models\Recipient;
 use App\Models\User;
+use App\Services\LoggedMailer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Mail;
 
 class SendNewsletterJob implements ShouldQueue
 {
@@ -36,19 +35,12 @@ class SendNewsletterJob implements ShouldQueue
         }
 
         $emails = $this->audienceEmails($newsletter->audience);
+        $mailer = app(LoggedMailer::class);
         $count = 0;
 
         foreach ($emails->chunk(100) as $chunk) {
             foreach ($chunk as $email) {
-                Mail::to($email)->queue(new NewsletterMail($newsletter));
-
-                MailLog::create([
-                    'mailable_type' => NewsletterMail::class,
-                    'recipient_email' => $email,
-                    'subject' => $newsletter->subject,
-                    'status' => 'queued',
-                ]);
-
+                $mailer->queue(new NewsletterMail($newsletter), $email);
                 $count++;
             }
         }

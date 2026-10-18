@@ -26,9 +26,20 @@ onMounted(load);
 
 const statusColors = {
     sent: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300',
-    queued: 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300 dark:text-sky-300',
+    queued: 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300',
+    sending: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300',
     failed: 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300',
 };
+
+function formatDate(value) {
+    return value ? value.slice(0, 16).replace('T', ' ') : '—';
+}
+
+// Queued/failed rows are retried automatically every 5 minutes until the cap.
+function attemptsLabel(log) {
+    if (!log.attempts) return 'Not attempted yet';
+    return `${log.attempts} attempt${log.attempts === 1 ? '' : 's'} · last ${formatDate(log.last_attempted_at)}`;
+}
 
 function mailType(value) {
     return value ? value.split('\\').pop().replace(/Mail$/, '') : '—';
@@ -38,7 +49,7 @@ function mailType(value) {
 <template>
     <div>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Mail logs</h1>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Every email the platform has queued, sent or failed to send.</p>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Every email the platform has queued, sent or failed to send. Queued and failed mail is retried automatically every 5 minutes.</p>
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row">
             <DebouncedSearchInput v-model="q" placeholder="Search email or subject…" @search="page = 1; load();" />
@@ -49,6 +60,7 @@ function mailType(value) {
             >
                 <option value="">All statuses</option>
                 <option value="queued">Queued</option>
+                <option value="sending">Sending</option>
                 <option value="sent">Sent</option>
                 <option value="failed">Failed</option>
             </select>
@@ -63,12 +75,13 @@ function mailType(value) {
                         <th class="px-4 py-3">Subject</th>
                         <th class="px-4 py-3">Type</th>
                         <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Attempts</th>
                         <th class="px-4 py-3">When</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                    <tr v-if="loading"><td colspan="5" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Loading…</td></tr>
-                    <tr v-else-if="!logs.length"><td colspan="5" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No mail logs.</td></tr>
+                    <tr v-if="loading"><td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Loading…</td></tr>
+                    <tr v-else-if="!logs.length"><td colspan="6" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No mail logs.</td></tr>
                     <tr v-for="log in logs" v-else :key="log.uuid" class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                         <td class="px-4 py-3 text-slate-900 dark:text-slate-100">{{ log.recipient_email }}</td>
                         <td class="max-w-xs truncate px-4 py-3 text-slate-600 dark:text-slate-400">{{ log.subject }}</td>
@@ -79,7 +92,8 @@ function mailType(value) {
                             </span>
                             <p v-if="log.error" class="mt-1 max-w-xs truncate text-xs text-rose-600 dark:text-rose-400" :title="log.error">{{ log.error }}</p>
                         </td>
-                        <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{{ log.created_at?.slice(0, 16).replace('T', ' ') }}</td>
+                        <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{{ attemptsLabel(log) }}</td>
+                        <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{{ formatDate(log.created_at) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -97,7 +111,8 @@ function mailType(value) {
                     </span>
                 </div>
                 <p class="mt-1 truncate text-sm text-slate-600 dark:text-slate-400">{{ log.subject }}</p>
-                <p class="mt-1 text-xs text-slate-400">{{ mailType(log.mailable_type) }} · {{ log.created_at?.slice(0, 16).replace('T', ' ') }}</p>
+                <p class="mt-1 text-xs text-slate-400">{{ mailType(log.mailable_type) }} · {{ formatDate(log.created_at) }}</p>
+                <p class="mt-1 text-xs text-slate-400">{{ attemptsLabel(log) }}</p>
                 <p v-if="log.error" class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ log.error }}</p>
             </div>
         </div>
