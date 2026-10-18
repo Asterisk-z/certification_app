@@ -1,10 +1,11 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRecipientsStore, useGroupsStore } from '@/stores/recipients';
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
 import { useOrgFilter } from '@/composables/useOrgFilter';
 import DebouncedSearchInput from '@/components/ui/DebouncedSearchInput.vue';
+import SortableHeader from '@/components/ui/SortableHeader.vue';
 import AppPagination from '@/components/ui/AppPagination.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import OrgFilterBanner from '@/components/ui/OrgFilterBanner.vue';
@@ -34,6 +35,50 @@ onMounted(async () => {
 function search() {
     store.filters.page = 1;
     store.fetch();
+}
+
+// --- per-column filters + sort -------------------------------------------
+
+const filterInput = 'block w-full rounded-md border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-normal normal-case tracking-normal text-slate-700 dark:text-slate-200 shadow-sm focus:border-brand-500 focus:ring-brand-500';
+
+// One entry per table column: text filters hit the API after a short pause,
+// selects immediately. `admin` columns only show for platform admins.
+const columns = computed(() => [
+    { key: 'name', label: 'Name', filter: 'text', placeholder: 'Filter name…' },
+    { key: 'email', label: 'Email', filter: 'text', placeholder: 'Filter email…' },
+    ...(auth.isAdmin ? [{ key: 'organization', label: 'Organization', filter: 'text', model: 'organization_name', placeholder: 'Filter organization…' }] : []),
+    {
+        key: 'groups', label: 'Groups', filter: 'select', model: 'group',
+        options: [{ value: '', label: 'All groups' }, ...groups.value.map((g) => ({ value: g.uuid, label: g.name }))],
+    },
+    {
+        key: 'certificates', label: 'Credentials', filter: 'select',
+        options: [{ value: '', label: 'Any' }, { value: 'some', label: 'Has credentials' }, { value: 'none', label: 'None' }],
+    },
+    {
+        key: 'portal', label: 'Portal', filter: 'select',
+        options: [{ value: '', label: 'Any' }, { value: 'active', label: 'Active' }, { value: 'not_invited', label: 'Not invited' }],
+    },
+]);
+
+const filterKeys = ['q', 'name', 'email', 'organization_name', 'group', 'certificates', 'portal'];
+const hasFilters = computed(() => filterKeys.some((k) => store.filters[k]));
+
+let filterTimer = null;
+function debouncedSearch() {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(search, 300);
+}
+
+function setSort({ field, dir }) {
+    store.filters.sort = field;
+    store.filters.dir = dir;
+    search();
+}
+
+function clearFilters() {
+    filterKeys.forEach((k) => (store.filters[k] = ''));
+    search();
 }
 
 function openCreate() {
@@ -151,17 +196,49 @@ function bulk(action) {
             </div>
         </div>
 
-        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <DebouncedSearchInput v-model="store.filters.q" placeholder="Search name or email…" @search="search" />
-            <select
-                v-model="store.filters.group"
-                class="rounded-lg border-slate-300 dark:border-slate-700 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500"
-                @change="search"
+            <button
+                v-if="hasFilters"
+                type="button"
+                class="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                @click="clearFilters"
             >
-                <option value="">All groups</option>
-                <option v-for="g in groups" :key="g.uuid" :value="g.uuid">{{ g.name }}</option>
-            </select>
+                Clear filters
+            </button>
         </div>
+
+        <!-- Mobile filters + sort (desktop has them in the table header) -->
+        <details class="mt-4 rounded-2xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 md:hidden">
+            <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300">Filters &amp; sort</summary>
+            <div class="grid grid-cols-1 gap-3 border-t border-slate-100 dark:border-slate-800 px-4 py-3 sm:grid-cols-2">
+                <label v-for="col in columns" :key="col.key" class="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                    {{ col.label }}
+                    <input
+                        v-if="col.filter === 'text'"
+                        v-model="store.filters[col.model || col.key]"
+                        type="search" :placeholder="col.placeholder" :class="[filterInput, 'mt-1']"
+                        @input="debouncedSearch"
+                    />
+                    <select v-else v-model="store.filters[col.model || col.key]" :class="[filterInput, 'mt-1']" @change="search">
+                        <option v-for="o in col.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                    </select>
+                </label>
+                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Sort by
+                    <div class="mt-1 flex gap-2">
+                        <select v-model="store.filters.sort" :class="filterInput" @change="search">
+                            <option value="created">Date added</option>
+                            <option v-for="col in columns" :key="col.key" :value="col.key">{{ col.label }}</option>
+                        </select>
+                        <select v-model="store.filters.dir" :class="[filterInput, 'w-28']" @change="search">
+                            <option value="asc">Asc</option>
+                            <option value="desc">Desc</option>
+                        </select>
+                    </div>
+                </label>
+            </div>
+        </details>
 
         <OrgFilterBanner class="mt-4" :active="orgFilter.active.value" :org-name="orgFilter.orgName.value" @clear="orgFilter.clear" />
 
@@ -189,13 +266,35 @@ function bulk(action) {
                                 @change="store.toggleSelectAll()"
                             />
                         </th>
-                        <th class="px-4 py-3">Name</th>
-                        <th class="px-4 py-3">Email</th>
-                        <th v-if="auth.isAdmin" class="px-4 py-3">Organization</th>
-                        <th class="px-4 py-3">Groups</th>
-                        <th class="px-4 py-3">Credentials</th>
-                        <th class="px-4 py-3">Portal</th>
+                        <SortableHeader
+                            v-for="col in columns" :key="col.key"
+                            :label="col.label" :field="col.key"
+                            :sort="store.filters.sort" :dir="store.filters.dir"
+                            @sort="setSort"
+                        />
                         <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                    <!-- Per-column filter row -->
+                    <tr class="border-t border-slate-100 dark:border-slate-800">
+                        <th class="px-4 py-2" />
+                        <th v-for="col in columns" :key="col.key" class="px-4 py-2 font-normal">
+                            <input
+                                v-if="col.filter === 'text'"
+                                v-model="store.filters[col.model || col.key]"
+                                type="search" :placeholder="col.placeholder" :class="filterInput"
+                                :aria-label="`Filter by ${col.label.toLowerCase()}`"
+                                @input="debouncedSearch"
+                            />
+                            <select
+                                v-else
+                                v-model="store.filters[col.model || col.key]" :class="filterInput"
+                                :aria-label="`Filter by ${col.label.toLowerCase()}`"
+                                @change="search"
+                            >
+                                <option v-for="o in col.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                            </select>
+                        </th>
+                        <th class="px-4 py-2" />
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

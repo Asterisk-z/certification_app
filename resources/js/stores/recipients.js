@@ -7,7 +7,20 @@ export const useRecipientsStore = defineStore('recipients', {
         items: [],
         meta: null,
         loading: false,
-        filters: { q: '', group: '', organization: '', page: 1 },
+        filters: {
+            q: '',
+            group: '',
+            organization: '',
+            // Per-column filters + sort (see RecipientController::index).
+            name: '',
+            email: '',
+            organization_name: '',
+            certificates: '',
+            portal: '',
+            sort: 'created',
+            dir: 'desc',
+            page: 1,
+        },
         selected: [],
     }),
 
