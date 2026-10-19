@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationTeamController;
+use App\Http\Controllers\Public\CertificateViewController;
 use App\Http\Controllers\Public\ChangelogController;
 use App\Http\Controllers\Public\VerificationController;
 use App\Http\Controllers\Recipient\PortalController;
@@ -35,6 +36,15 @@ Route::get('verify', [VerificationController::class, 'lookup'])->middleware('thr
 
 // Public changelog / current version (shown via the version badge everywhere).
 Route::get('changelog', ChangelogController::class);
+
+// Certificate downloads need no session: the uuid is the unguessable key,
+// exactly as for the public /c/{uuid}/download link. Keeping the /api/admin
+// and /api/org spellings alive means links opened in a new tab (or copied)
+// keep working after the session expires.
+foreach (['admin', 'org'] as $area) {
+    Route::get("{$area}/certificates/{uuid}/download", [CertificateViewController::class, 'download'])
+        ->middleware('throttle:30,1');
+}
 
 // ---------------------------------------------------------------------------
 // Public auth
@@ -114,7 +124,6 @@ $tenantRoutes = function () {
         Route::post('certificates/bulk', [CertificateActionController::class, 'bulk']);
         Route::post('templates/{template:uuid}/send', [CertificateController::class, 'send']);
         Route::get('certificates/{uuid}', [CertificateController::class, 'show']);
-        Route::get('certificates/{uuid}/download', [CertificateController::class, 'download']);
         Route::delete('certificates/{uuid}', [CertificateController::class, 'destroy']);
         Route::post('certificates/{uuid}/revoke', [CertificateActionController::class, 'revoke']);
         Route::post('certificates/{uuid}/unrevoke', [CertificateActionController::class, 'unrevoke']);

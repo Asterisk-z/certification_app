@@ -404,6 +404,22 @@ class CertificateLifecycleTest extends TestCase
             ->assertDownload($certificate->certificate_number.'.png');
     }
 
+    public function test_download_links_work_without_a_session(): void
+    {
+        Storage::fake('local');
+        $certificate = Certificate::factory()->sent()->create(['certificate_template_id' => $this->template->id]);
+
+        Storage::disk('local')->put("certificates/{$certificate->uuid}.pdf", 'fake-pdf');
+        $certificate->forceFill(['pdf_path' => "certificates/{$certificate->uuid}.pdf"])->save();
+
+        // Both the app's spelling and the public /c spelling are open: the
+        // uuid is the key, so a link opened in a new tab after the session
+        // expired must still download instead of bouncing to login.
+        foreach (["/api/org/certificates/{$certificate->uuid}/download?format=pdf", "/c/{$certificate->uuid}/download?format=pdf"] as $url) {
+            $this->get($url)->assertOk()->assertDownload($certificate->certificate_number.'.pdf');
+        }
+    }
+
     public function test_expiry_job_flips_overdue_sent_certificates(): void
     {
         $overdue = Certificate::factory()->sent()->create([

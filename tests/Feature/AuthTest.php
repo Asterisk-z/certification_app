@@ -53,11 +53,10 @@ class AuthTest extends TestCase
 
     public function test_guest_browser_navigation_to_protected_url_redirects_to_spa_login(): void
     {
-        // Downloads are opened via window.open, i.e. a plain navigation that
-        // accepts HTML. A guest must be sent to the SPA login page, not crash
-        // on the (non-existent) backend `login` route.
-        $this->get('/api/org/certificates/00000000-0000-0000-0000-000000000000/download?format=pdf')
-            ->assertRedirect('/login');
+        // A plain (HTML-accepting) navigation to a protected URL must send the
+        // guest to the SPA login page, not crash on a non-existent backend
+        // `login` route.
+        $this->get('/api/auth/me')->assertRedirect('/login');
     }
 
     public function test_me_returns_current_user(): void

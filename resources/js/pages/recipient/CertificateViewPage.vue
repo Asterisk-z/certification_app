@@ -13,7 +13,7 @@ onMounted(async () => {
 });
 
 function download(format = 'pdf') {
-    window.open(`/api/me/certificates/${certificate.value.uuid}/download?format=${format}`, '_blank');
+    window.open(`/c/${certificate.value.uuid}/download?format=${format}`, '_blank');
 }
 </script>
 

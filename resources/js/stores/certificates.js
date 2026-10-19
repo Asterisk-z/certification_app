@@ -83,7 +83,8 @@ export const useCertificatesStore = defineStore('certificates', {
         },
 
         download(uuid, format = 'pdf') {
-            window.open(`/api${apiBase()}/certificates/${uuid}/download?format=${format}`, '_blank');
+            // Public link (uuid is the key) so it never depends on the session.
+            window.open(`/c/${uuid}/download?format=${format}`, '_blank');
         },
     },
 });

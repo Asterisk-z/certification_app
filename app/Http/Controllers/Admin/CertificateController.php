@@ -11,14 +11,11 @@ use App\Models\Group;
 use App\Models\Recipient;
 use App\Services\CertificateIssueService;
 use App\Services\CertificateNumberService;
-use App\Services\CertificateRenderService;
 use App\Services\OrganizationLimitService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CertificateController extends Controller
 {
@@ -207,23 +204,6 @@ class CertificateController extends Controller
         activity()->performedOn($certificate)->causedBy($request->user())->log('certificate_created_manually');
 
         return response()->json($certificate->load('recipient', 'template'), 201);
-    }
-
-    public function download(string $uuid): StreamedResponse|JsonResponse
-    {
-        $certificate = Certificate::withTrashed()->where('uuid', $uuid)->firstOrFail();
-        $format = request()->query('format') === 'png' ? 'png' : 'pdf';
-
-        try {
-            $path = app(CertificateRenderService::class)->downloadPath($certificate, $format);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'The file is not available yet: '.$e->getMessage()], 422);
-        }
-
-        return Storage::disk('local')->download(
-            $path,
-            $certificate->certificate_number.'.'.$format
-        );
     }
 
     public function destroy(Request $request, string $uuid): JsonResponse

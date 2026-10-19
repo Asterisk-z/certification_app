@@ -27,7 +27,7 @@ async function load() {
 onMounted(load);
 
 function download(certificate, format = 'pdf') {
-    window.open(`/api/me/certificates/${certificate.uuid}/download?format=${format}`, '_blank');
+    window.open(`/c/${certificate.uuid}/download?format=${format}`, '_blank');
 }
 </script>
 
