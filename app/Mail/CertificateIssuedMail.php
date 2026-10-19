@@ -44,7 +44,7 @@ class CertificateIssuedMail extends Mailable
 
         if ($pdf && Storage::disk('local')->exists($pdf)) {
             $attachments[] = Attachment::fromStorageDisk('local', $pdf)
-                ->as($this->certificate->certificate_number.'.pdf')
+                ->as($this->certificate->fileName('pdf'))
                 ->withMime('application/pdf');
         }
 
@@ -53,7 +53,7 @@ class CertificateIssuedMail extends Mailable
             && $this->certificate->png_path
             && Storage::disk('local')->exists($this->certificate->png_path)) {
             $attachments[] = Attachment::fromStorageDisk('local', $this->certificate->png_path)
-                ->as($this->certificate->certificate_number.'.png')
+                ->as($this->certificate->fileName('png'))
                 ->withMime('image/png');
         }
 

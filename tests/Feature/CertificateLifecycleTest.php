@@ -407,7 +407,11 @@ class CertificateLifecycleTest extends TestCase
     public function test_download_links_work_without_a_session(): void
     {
         Storage::fake('local');
-        $certificate = Certificate::factory()->sent()->create(['certificate_template_id' => $this->template->id]);
+        // Numbers may contain "/" which is illegal in a download filename.
+        $certificate = Certificate::factory()->sent()->create([
+            'certificate_template_id' => $this->template->id,
+            'certificate_number' => '2431/102331',
+        ]);
 
         Storage::disk('local')->put("certificates/{$certificate->uuid}.pdf", 'fake-pdf');
         $certificate->forceFill(['pdf_path' => "certificates/{$certificate->uuid}.pdf"])->save();
@@ -416,7 +420,7 @@ class CertificateLifecycleTest extends TestCase
         // uuid is the key, so a link opened in a new tab after the session
         // expired must still download instead of bouncing to login.
         foreach (["/api/org/certificates/{$certificate->uuid}/download?format=pdf", "/c/{$certificate->uuid}/download?format=pdf"] as $url) {
-            $this->get($url)->assertOk()->assertDownload($certificate->certificate_number.'.pdf');
+            $this->get($url)->assertOk()->assertDownload('2431-102331.pdf');
         }
     }
 

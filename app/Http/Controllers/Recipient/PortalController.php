@@ -50,7 +50,7 @@ class PortalController extends Controller
             return response()->json(['message' => 'The file is not available yet.'], 422);
         }
 
-        return Storage::disk('local')->download($path, $certificate->certificate_number.'.'.$format);
+        return Storage::disk('local')->download($path, $certificate->fileName($format));
     }
 
     public function updateProfile(Request $request): JsonResponse

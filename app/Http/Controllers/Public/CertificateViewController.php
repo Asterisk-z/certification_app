@@ -36,7 +36,7 @@ class CertificateViewController extends Controller
         // recipient portal's preview.
         if (request()->boolean('embed')) {
             return $uploaded
-                ? Storage::disk('local')->response($certificate->uploaded_file_path, $certificate->certificate_number.'.pdf')
+                ? Storage::disk('local')->response($certificate->uploaded_file_path, $certificate->fileName('pdf'))
                 : response($this->renderer->html($certificate));
         }
 
@@ -57,6 +57,6 @@ class CertificateViewController extends Controller
             return response()->json(['message' => 'The file is not available yet.'], 422);
         }
 
-        return Storage::disk('local')->download($path, $certificate->certificate_number.'.'.$format);
+        return Storage::disk('local')->download($path, $certificate->fileName($format));
     }
 }

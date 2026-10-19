@@ -122,6 +122,18 @@ class Certificate extends Model
     }
 
     /**
+     * A download / attachment filename for this credential. Certificate
+     * numbers are free-form (e.g. "2431/102331") but a Content-Disposition
+     * filename may not contain path separators, so those become dashes.
+     */
+    public function fileName(string $extension): string
+    {
+        $base = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', (string) $this->certificate_number), '-. ');
+
+        return ($base !== '' ? $base : 'certificate').'.'.ltrim($extension, '.');
+    }
+
+    /**
      * The issuing organization's name exactly as it was entered on the system,
      * or null for platform/admin-issued credentials (organization_id is null),
      * which callers attribute to the platform itself.
